@@ -143,4 +143,4 @@ spec:
       volumes:
       - name: datadir
         hostPath:
-          path: /data/zookeper
+          path: {{ .Values.hostpath }}

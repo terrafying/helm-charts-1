@@ -5,8 +5,8 @@ This project contains a Docker image meant to facilitate the deployment of
 ## Limitations
 1. Scaling is not currently supported. An ensemble's membership can not be updated in a safe way 
 in ZooKeeper 3.4.10 (The current stable release).
-2. Observers are currently not supported. Contributions are welcome.
-3. Persistent Volumes must be used. emptyDirs will likely result in a loss of data.
+2. Observers are currently not supported.
+3. Statefull set store data on host. Host Path should be specified 
 
 ## Docker Image
 The docker image contained in this repository is comprised of a base Ubuntu 16.04 image using the latest
@@ -188,20 +188,13 @@ volumeMounts for the container should be defined as below.
     mountPath: /var/lib/zookeeper
 ```
 ### Storage Configuration
-Currently, the use of Persistent Volumes to provide durable, network attached storage is mandatory.
-**If you use the provided image with emptyDirs, you will likely suffer a data loss.** The example 
-below demonstrates how to request a dynamically provisioned persistent volume of 20 GiB.
+Currently, the use of Host Path to provide durable, network attached storage is mandatory.
+**If you use the provided image with emptyDirs, you will likely suffer a data loss.** 
 ```yaml
-  volumeClaimTemplates:
-  - metadata:
-      name: datadir
-      annotations:
-        volume.alpha.kubernetes.io/storage-class: anything
-    spec:
-      accessModes: [ "ReadWriteOnce" ]
-      resources:
-        requests:
-          storage: 20Gi
+  volumes:
+      - name: datadir
+        hostPath:
+          path: /data/k8s/zookeper
 ```
 
 ### Logging 

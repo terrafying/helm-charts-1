@@ -14,3 +14,5 @@
 # limitations under the License.
 
 # Default values for template variables.
+
+hostpath: /data/k8s/zookeper
