@@ -26,7 +26,7 @@ spec:
       containers:
       - env:
         - name: ZK_HOSTS
-          value: {{ .Values.zookeeper-connect }}
+          value: {{ .Values.zookeeper_connect }}
         image: ihardz/kafka-manager:latest
         imagePullPolicy: Always
         name: kafka-manager

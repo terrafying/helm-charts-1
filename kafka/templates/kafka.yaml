@@ -30,7 +30,7 @@ metadata:
 data:
   server.properties: |
     listeners=PLAINTEXT://:9093
-    zookeeper.connect={{ .Values.zookeeper-connect }}/kafka
+    zookeeper.connect={{ .Values.zookeeper_connect }}/kafka
     log.dir=/var/lib/kafka
     auto.create.topics.enable=true
     auto.leader.rebalance.enable=true

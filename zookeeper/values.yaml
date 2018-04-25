@@ -15,6 +15,4 @@
 
 # Default values for template variables.
 
-hostpath: /data/k8s/kafka
-
-zookeeper_connect: zk-svc.zookeper:2181
+hostpath: /data/k8s/zookeper
