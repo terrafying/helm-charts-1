@@ -12,6 +12,17 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-name: zookeper
+apiVersion: v1
+name: zookeeper
+home: https://zookeeper.apache.org/
 version: 0.1
-description: Zookeper hosted by Kubernetes.
+appVersion: 3.4.9
+description: Centralized service for maintaining configuration information, naming,
+  providing distributed synchronization, and providing group services.
+icon: https://zookeeper.apache.org/images/zookeeper_small.gif
+sources:
+- https://github.com/apache/zookeeper
+- https://github.com/kubernetes/contrib/tree/master/statefulsets/zookeeper
+maintainers:
+- name: ihardz
+  email: gordeenkoilya@gmail.com

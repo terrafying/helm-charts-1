@@ -12,6 +12,23 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+apiVersion: v1
 name: kafka
 version: 0.1
-description: Kafka hosted by Kubernetes.
+appVersion: 4.0.1
+keywords:
+- kafka
+- zookeeper
+- kafka statefulset
+home: https://kafka.apache.org/
+description: Apache Kafka is publish-subscribe messaging rethought as a distributed
+  commit log.
+sources:
+- https://github.com/kubernetes/charts/tree/master/incubator/zookeeper
+- https://github.com/Yolean/kubernetes-kafka
+- https://github.com/confluentinc/cp-docker-images
+- https://github.com/apache/kafka
+maintainers:
+- name: ihardz
+  email: gordeenkoilya@gmail.com
+icon: https://kafka.apache.org/images/logo.png
