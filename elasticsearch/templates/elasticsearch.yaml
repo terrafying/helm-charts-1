@@ -1,0 +1,199 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: es-cm
+data:
+  elasticsearch.yml: |
+    bootstrap.memory_lock: false
+    cluster.name: k8s-cluster
+    network.host: 0.0.0.0
+    node.name: ${HOSTNAME}
+    http.cors.allow-headers: Authorization,X-Requested-With,Content-Length,Content-Type
+    http.cors.allow-origin: \"*\"
+    http.cors.enabled: true
+    http.port: 9200
+    transport.tcp.port: 9300
+    script.painless.regex.enabled: true
+    xpack.security.enabled: false
+    discovery.zen.minimum_master_nodes: 1
+    discovery.zen.ping.unicast.hosts:{{range $i, $e := until (int .Values.replicas)}}
+    - es-{{$i}}.es-svc.elastic.svc.cluster.local{{end}}
+  jvm.options: |
+    -Dfile.encoding=UTF-8
+    -Dio.netty.noKeySetOptimization=true
+    -Dio.netty.noUnsafe=true
+    -Dio.netty.recycler.maxCapacityPerThread=0
+    -Djava.awt.headless=true
+    -Djna.nosys=true
+    -Dlog4j.shutdownHookEnabled=false
+    -Dlog4j2.disable.jmx=true
+    -XX:+AlwaysPreTouch
+    -XX:+HeapDumpOnOutOfMemoryError
+    -XX:+PrintGCApplicationStoppedTime
+    -XX:+PrintGCDateStamps
+    -XX:+PrintGCDetails
+    -XX:+PrintTenuringDistribution
+    -XX:+UseCMSInitiatingOccupancyOnly
+    -XX:+UseConcMarkSweepGC
+    -XX:+UseGCLogFileRotation
+    -XX:-OmitStackTraceInFastThrow
+    -XX:CMSInitiatingOccupancyFraction=75
+    -Xloggc:/usr/share/elasticsearch/logs/gc.log
+    -XX:GCLogFileSize=64m
+    -XX:NumberOfGCLogFiles=32
+    -Xms3072m
+    -Xmx3072m
+    -Xss16m
+    -server
+---
+apiVersion: policy/v1beta1
+kind: PodDisruptionBudget
+metadata:
+  name: es-pdb
+spec:
+  minAvailable: {{add (div (int .Values.replicas) 2) (div (add1 (int .Values.replicas)) 4) }}
+  selector:
+    matchLabels:
+      app: es
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: es-svc
+  name: es-svc
+spec:
+  clusterIP: None
+  ports:
+  - name: client
+    port: 9200
+    protocol: TCP
+    targetPort: 9200
+  - name: transport
+    port: 9300
+    protocol: TCP
+    targetPort: 9300
+  selector:
+    app: es
+  sessionAffinity: None
+  type: ClusterIP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: es-ext-svc
+  name: es-ext-svc
+spec:
+  ports:
+  - name: client
+    port: 9200
+    protocol: TCP
+    targetPort: 9200
+  - name: transport
+    port: 9300
+    protocol: TCP
+    targetPort: 9300
+  selector:
+    app: es
+  type: ClusterIP
+  externalIPs:
+  - {{ .Values.externalIP }}
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  labels:
+    app: es
+  name: es
+  namespace: elastic
+spec:
+  podManagementPolicy: OrderedReady
+  replicas: {{ .Values.replicas }}
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      app: es
+  serviceName: es-svc
+  template:
+    metadata:
+      labels:
+        app: es
+    spec:
+      initContainers:
+      - name: es-init
+        image: alpine:3.6
+        command:
+        - /sbin/sysctl
+        - -w
+        - vm.max_map_count=262144
+        securityContext:
+          privileged: true
+      - name: es-chown
+        image: docker.elastic.co/elasticsearch/elasticsearch:6.2.3
+        imagePullPolicy: Always
+        command:
+        - /bin/bash
+        - -c
+        - chown -R elasticsearch:elasticsearch /usr/share/elasticsearch/data &&
+          chown -R elasticsearch:elasticsearch /usr/share/elasticsearch/logs
+        securityContext:
+          runAsUser: 0
+        volumeMounts:
+        - mountPath: /usr/share/elasticsearch/data
+          name: datadir
+      containers:
+      - name: es
+        image: docker.elastic.co/elasticsearch/elasticsearch:6.2.3
+        imagePullPolicy: Always
+        resources:
+          limits:
+            cpu: "2"
+            memory: 4Gi
+          requests:
+            cpu: "1"
+            memory: 1Gi
+        ports:
+        - containerPort: 9200
+          name: client
+          protocol: TCP
+        - containerPort: 9300
+          name: transport
+          protocol: TCP
+        livenessProbe:
+          failureThreshold: 3
+          initialDelaySeconds: 60
+          periodSeconds: 10
+          successThreshold: 1
+          tcpSocket:
+            port: transport
+          timeoutSeconds: 1
+        volumeMounts:
+        - mountPath: /usr/share/elasticsearch/data
+          name: datadir
+        - mountPath: /usr/share/elasticsearch/config/elasticsearch.yml
+          name: es-config
+          subPath: elasticsearch.yml
+        - mountPath: /usr/share/elasticsearch/config/jvm.options
+          name: es-config
+          subPath: jvm.options
+      dnsPolicy: ClusterFirst
+      volumes:
+      - hostPath:
+          path: {{ .Values.hostpath }}
+          type: DirectoryOrCreate
+        name: datadir
+      - configMap:
+          defaultMode: 420
+          name: es-cm
+        name: es-config
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchExpressions:
+              - key: app
+                operator: In
+                values:
+                - es
+            topologyKey: kubernetes.io/hostname
