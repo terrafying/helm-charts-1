@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 apiVersion: v1
-name: kibana
+name: fluentd
 version: 0.1
 appVersion: 2.0.4
 description: Fluentd is an open source data collector for unified logging layer.
