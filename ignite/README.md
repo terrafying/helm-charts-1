@@ -12,40 +12,36 @@ However, you can use the static IP finder and list the IP addresses of all the I
 
 To enable Apache Ignite nodes auto-discovery in Kubernetes, you need to enable TcpDiscoveryKubernetesIpFinder in IgniteConfiguration.
 
-'''xml     
-    <beans xmlns="http://www.springframework.org/schema/beans"
-        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-        xmlns:util="http://www.springframework.org/schema/util"
-        xsi:schemaLocation="
-            http://www.springframework.org/schema/beans
-            http://www.springframework.org/schema/beans/spring-beans.xsd
-            http://www.springframework.org/schema/util
-            http://www.springframework.org/schema/util/spring-util.xsd">
-    
-    <bean class="org.apache.ignite.configuration.IgniteConfiguration">
-    <property name="discoverySpi">
-        <bean class="org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi">
-        <property name="ipFinder">
-            <bean class="org.apache.ignite.spi.discovery.tcp.ipfinder.kubernetes.TcpDiscoveryKubernetesIpFinder">
-                <property name="setServiceName" value="ignite-svc"/>
-                <property name="setNamespace" value="ignite"/>
-            </bean>
-        </property>
-        </bean>
-    </property>
-    </bean>
-    </beans>
-'''
+```xml
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns:util="http://www.springframework.org/schema/util"
+	xsi:schemaLocation="
+		http://www.springframework.org/schema/beans
+		http://www.springframework.org/schema/beans/spring-beans.xsd
+		http://www.springframework.org/schema/util
+		http://www.springframework.org/schema/util/spring-util.xsd">
+
+<bean class="org.apache.ignite.configuration.IgniteConfiguration">
+<property name="discoverySpi">
+	<bean class="org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi">
+	<property name="ipFinder">
+		<bean class="org.apache.ignite.spi.discovery.tcp.ipfinder.kubernetes.TcpDiscoveryKubernetesIpFinder">
+			<property name="setServiceName" value="ignite-svc"/>
+			<property name="setNamespace" value="ignite"/>
+		</bean>
+	</property>
+	</bean>
+</property>
+</bean>
+</beans>
+```
 
 ### Initialization
 
-First time Kibana will run and perform optimization which may take up to 20 minutes.
-We use Persistent Volume to store optimization result so next time Kibana will start very quickly
 
 ### Storage
 
-The Kibana Deployment will use the [Persistent Volume Claim][pvc] to
-store data. **Important:** please specify name of your [Storage Class][storage] in your setup!
 
 [elasticsearch]: https://www.elastic.co/products/elasticsearch
 [ignite]: https://ignite.apache.org/
