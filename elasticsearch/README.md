@@ -25,6 +25,14 @@ themselves, in order to ensure that the kernel state variable
 Elasticsearch. You may remove the init container if you know that your host
 OS meets this requirement.
 
+### Memory Lock
+[bootstrap-memory_lock][bootstrap] is enabled by default. To make it work you will have to set default ulimits in your docker service on all hosts which will 
+run elastic search.
+```
+   --default-ulimit memlock=-1:-1
+   --default-ulimit nofile=65536:65536
+```
+
 ### Storage
 
 The Elasticsearch StatefulSet will use the hostPath volume to
@@ -39,5 +47,5 @@ store data. **Important:** please change the path to real path on your host in y
 [statefulSet]: https://kubernetes.io/docs/concepts/workloads/controllers/statefulset
 [initContainer]: https://kubernetes.io/docs/concepts/workloads/pods/init-containers/
 [daemonSet]: https://kubernetes.io/docs/concepts/workloads/controllers/daemonset/
-
+[bootstrap]: https://www.elastic.co/guide/en/elasticsearch/reference/master/setup-configuration-memory.html#bootstrap-memory_lock
 [![Analytics](https://kubernetes-site.appspot.com/UA-36037335-10/GitHub/cluster/addons/fluentd-elasticsearch/README.md?pixel)]()

@@ -12,19 +12,5 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-apiVersion: v1
-name: kibana
-version: 0.1
-appVersion: 6.2.3
-description: Kibana is an open source data visualization plugin for Elasticsearch
-icon: https://www.elastic.co/assets/bltf11265439e44d327/logo-elastic-kibana-lt.svg
-keywords:
-- elasticsearch
-- kibana
-maintainers:
-- name: Ilya Hardzeenka
-  email: gordeenkoilya@gmail.com
-sources:
-- https://github.com/elastic/kibana
-engine: gotpl
-home: https://www.elastic.co/products/kibana
+
+# Default values for template variables.

@@ -4,7 +4,7 @@ metadata:
   name: es-cm
 data:
   elasticsearch.yml: |
-    bootstrap.memory_lock: false
+    bootstrap.memory_lock: true
     cluster.name: k8s-cluster
     network.host: 0.0.0.0
     node.name: ${HOSTNAME}
@@ -41,8 +41,8 @@ data:
     -Xloggc:/usr/share/elasticsearch/logs/gc.log
     -XX:GCLogFileSize=64m
     -XX:NumberOfGCLogFiles=32
-    -Xms3072m
-    -Xmx3072m
+    -Xms2048m
+    -Xmx2048m
     -Xss16m
     -server
 ---
@@ -148,11 +148,11 @@ spec:
         imagePullPolicy: Always
         resources:
           limits:
-            cpu: "2"
-            memory: 4Gi
+            cpu: "4"
+            memory: 6Gi
           requests:
-            cpu: "1"
-            memory: 1Gi
+            cpu: "4"
+            memory: 4Gi
         ports:
         - containerPort: 9200
           name: client

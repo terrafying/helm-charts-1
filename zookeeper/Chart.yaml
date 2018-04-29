@@ -19,7 +19,7 @@ version: 0.1
 appVersion: 3.4.9
 description: Centralized service for maintaining configuration information, naming,
   providing distributed synchronization, and providing group services.
-icon: https://zookeeper.apache.org/images/zookeeper_small.gif
+icon: https://cdn-images-1.medium.com/max/1600/0*2k47v5N46JmLC2cf.png
 sources:
 - https://github.com/apache/zookeeper
 - https://github.com/kubernetes/contrib/tree/master/statefulsets/zookeeper

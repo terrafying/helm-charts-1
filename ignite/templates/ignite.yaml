@@ -1,0 +1,170 @@
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: ignite-cm
+data:
+  example-kube.xml: |
+    <?xml version="1.0" encoding="UTF-8"?>
+    <beans xmlns="http://www.springframework.org/schema/beans"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xmlns:util="http://www.springframework.org/schema/util"
+        xsi:schemaLocation="
+            http://www.springframework.org/schema/beans
+            http://www.springframework.org/schema/beans/spring-beans.xsd
+            http://www.springframework.org/schema/util
+            http://www.springframework.org/schema/util/spring-util.xsd">
+    
+        <bean class="org.apache.ignite.configuration.IgniteConfiguration">
+            <property name="discoverySpi">
+                <bean class="org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi">
+                <property name="ipFinder">
+                    <bean class="org.apache.ignite.spi.discovery.tcp.ipfinder.kubernetes.TcpDiscoveryKubernetesIpFinder">
+                        <property name="serviceName" value="ignite-svc"/>
+                        <property name="namespace" value="ignite"/>
+                    </bean>
+                </property>
+                </bean>
+            </property>
+            <property name="dataStorageConfiguration">
+                <bean class="org.apache.ignite.configuration.DataStorageConfiguration">
+                    <property name="defaultDataRegionConfiguration">
+                        <bean class="org.apache.ignite.configuration.DataRegionConfiguration">
+                            <property name="name" value="default_data_region"/>
+                            <property name="initialSize" value="#{256 * 1024 * 1024}"/>
+                            <property name="maxSize" value="#{1 * 1024 * 1024 * 1024}"/>
+                        </bean>
+                    </property>
+                </bean>
+            </property>
+            <property name="cacheConfiguration">
+                <list>
+                    <!-- Partitioned cache example configuration (Atomic mode). -->
+                    <bean class="org.apache.ignite.configuration.CacheConfiguration">
+                        <property name="name" value="default"/>
+                        <property name="cacheMode" value="PARTITIONED"/>
+                        <property name="atomicityMode" value="ATOMIC"/>
+                        <property name="backups" value="1"/>
+                    </bean>
+                </list>
+            </property>
+        </bean>
+    </beans>
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: ignite-sa
+---
+kind: Role
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: ignite-role
+rules:
+- apiGroups: [""]
+  resources: ["endpoints"]
+  verbs: ["get", "list"]
+---
+kind: RoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: ignite-sa-rb
+subjects:
+- kind: ServiceAccount
+  name: ignite-sa
+  apiGroup: ""
+roleRef:
+  kind: Role
+  name: ignite-role
+  apiGroup: ""
+---
+apiVersion: v1
+kind: Service
+metadata:
+  # Name of Ignite Service used by Kubernetes IP finder. 
+  # The name must be equal to TcpDiscoveryKubernetesIpFinder.serviceName.
+  name: ignite-svc
+spec:
+  clusterIP: None 
+  ports:
+    - port: 9042
+  selector:
+    # Must be equal to one of the labels set in Ignite pods'
+    # deployement configuration.
+    app: ignite
+---
+apiVersion: v1
+kind: Service
+metadata:
+  # Name of Ignite Service used by Kubernetes IP finder. 
+  # The name must be equal to TcpDiscoveryKubernetesIpFinder.serviceName.
+  name: ignite-ext-svc
+spec:
+  ports:
+    - name: rest
+      port: 8080
+    - name: sql
+      port: 10800
+  selector:
+    # Must be equal to one of the labels set in Ignite pods'
+    # deployement configuration.
+    app: ignite
+# An example of a Kubernetes configuration for Ignite pods deployment.
+---
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  # Custom Ignite cluster's name.
+  name: ignite
+spec:
+  # A number of Ignite pods to be started by Kubernetes initially.
+  replicas: 3
+  template:
+    metadata:
+      labels:
+        # This label has to be added to the selector's section of 
+        # ignite-service.yaml so that the Kubernetes Ignite lookup service
+        # can easily track all Ignite pods available deployed so far.
+        app: ignite
+    spec:
+      serviceAccountName: ignite-sa
+      containers:
+        # Custom Ignite pod name.
+      - name: ignite
+        # Ignite Docker image. Kubernetes IP finder is supported starting from
+        # Apache Ignite 2.3.0
+        image: apacheignite/ignite:2.4.0
+        imagePullPolicy: Always
+        resources:
+          limits:
+            cpu: 1000m
+            memory: 2Gi
+          requests:
+            cpu: 200m
+            memory: 512Mi
+        env:
+        # Ignite's Docker image parameter. Adding the jar file that
+        # contain TcpDiscoveryKubernetesIpFinder implementation.
+        - name: OPTION_LIBS
+          value: ignite-kubernetes,ignite-rest-http
+        # Ignite's Docker image parameter. Passing the Ignite configuration
+        # to use for an Ignite pod.
+        - name: CONFIG_URI
+          value: file:////data/ignite/example-kube.xml
+        ports:
+        # Ports to open.
+        # Might be optional depending on your Kubernetes environment.
+        - containerPort: 47100 # communication SPI port number.
+        - containerPort: 47500 # discovery SPI port number.
+        - containerPort: 49112 # JMX port number.
+        - containerPort: 8080  # REST port number.
+        - containerPort: 10800 # SQL port number.
+        volumeMounts:
+        # Mounting the storage with the Ignite configuration.
+        - name: ignite-config
+          mountPath: /data/ignite/example-kube.xml
+          subPath: example-kube.xml
+      volumes:
+        - name: ignite-config
+          configMap:
+              name: ignite-cm
+          
