@@ -14,7 +14,7 @@
 # limitations under the License.
 apiVersion: v1
 name: kibana
-version: 0.1
+version: 0.1.0
 appVersion: 6.2.3
 description: Kibana is an open source data visualization plugin for Elasticsearch
 icon: https://www.elastic.co/assets/bltf11265439e44d327/logo-elastic-kibana-lt.svg

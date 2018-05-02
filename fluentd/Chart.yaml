@@ -14,7 +14,7 @@
 # limitations under the License.
 apiVersion: v1
 name: fluentd
-version: 0.1
+version: 0.1.0
 appVersion: 2.0.4
 description: Fluentd is an open source data collector for unified logging layer.
 icon: https://www.fluentd.org/assets/img/miscellany/fluentd-logo.png
