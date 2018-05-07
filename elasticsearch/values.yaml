@@ -15,8 +15,22 @@
 
 # Default values for template variables.
 
-hostpath: /data/k8s/elasticsearch
+version: 5.6.9
+
+clusterName: conductor
+
+
+resourcesLimitsCpu: "1"
+resourcesLimitsMemory: 4Gi
+resourcesRequestsCpu: "1"
+resourcesRequestsMemory: 2Gi
+
+xms: 1024m
+xmx: 1024m
+xss: 16m
 
 replicas: 3
 
 externalIP: 0.0.0.0
+
+hostpath: /data/k8s/elasticsearch5

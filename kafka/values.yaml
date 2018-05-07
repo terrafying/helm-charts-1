@@ -17,4 +17,4 @@
 
 hostpath: /data/k8s/kafka
 
-zookeeper_connect: zk-svc.zookeper:2181
+zookeeper_connect: zk-svc.zookeeper:2181

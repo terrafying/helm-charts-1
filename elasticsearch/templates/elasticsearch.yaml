@@ -5,7 +5,7 @@ metadata:
 data:
   elasticsearch.yml: |
     bootstrap.memory_lock: true
-    cluster.name: k8s-cluster
+    cluster.name: {{ .Values.clusterName }}
     network.host: 0.0.0.0
     node.name: ${HOSTNAME}
     http.cors.allow-headers: Authorization,X-Requested-With,Content-Length,Content-Type
@@ -17,7 +17,7 @@ data:
     xpack.security.enabled: false
     discovery.zen.minimum_master_nodes: 1
     discovery.zen.ping.unicast.hosts:{{range $i, $e := until (int .Values.replicas)}}
-    - es-{{$i}}.es-svc.elastic.svc.cluster.local{{end}}
+    - es-{{$i}}.es-svc.${POD_NAMESPACE}.svc.cluster.local{{end}}
   jvm.options: |
     -Dfile.encoding=UTF-8
     -Dio.netty.noKeySetOptimization=true
@@ -41,9 +41,9 @@ data:
     -Xloggc:/usr/share/elasticsearch/logs/gc.log
     -XX:GCLogFileSize=64m
     -XX:NumberOfGCLogFiles=32
-    -Xms2048m
-    -Xmx2048m
-    -Xss16m
+    -Xms{{ .Values.xms }}
+    -Xmx{{ .Values.xmx }}
+    -Xss{{ .Values.xss }}
     -server
 ---
 apiVersion: policy/v1beta1
@@ -106,7 +106,6 @@ metadata:
   labels:
     app: es
   name: es
-  namespace: elastic
 spec:
   podManagementPolicy: OrderedReady
   replicas: {{ .Values.replicas }}
@@ -130,7 +129,7 @@ spec:
         securityContext:
           privileged: true
       - name: es-chown
-        image: docker.elastic.co/elasticsearch/elasticsearch:6.2.3
+        image: docker.elastic.co/elasticsearch/elasticsearch:{{ .Values.version }}
         imagePullPolicy: Always
         command:
         - /bin/bash
@@ -144,15 +143,20 @@ spec:
           name: datadir
       containers:
       - name: es
-        image: docker.elastic.co/elasticsearch/elasticsearch:6.2.3
+        image: docker.elastic.co/elasticsearch/elasticsearch:{{ .Values.version }}
         imagePullPolicy: Always
+        env:
+        - name: POD_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
         resources:
           limits:
-            cpu: "4"
-            memory: 6Gi
+            cpu: {{ .Values.resourcesLimitsCpu }}
+            memory: {{ .Values.resourcesLimitsMemory }}
           requests:
-            cpu: "4"
-            memory: 4Gi
+            cpu: {{ .Values.resourcesRequestsCpu }}
+            memory: {{ .Values.resourcesRequestsMemory }}
         ports:
         - containerPort: 9200
           name: client
