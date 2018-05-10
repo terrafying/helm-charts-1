@@ -53,7 +53,7 @@ data:
       preconnect: false
   {{end}}
   seeds.list: | {{range $i, $e := until (int .Values.replicas)}} {{ $groupNum := add1 (div $i $factor)}} {{ $groupCount := add $quotient (max  ( min (sub $remainder (mod $i $factor)) 1) 0) }}
-    - dynomite-{{$i}}.dynomite-svc.dynomite.svc.cluster.local:8101:us-east-1{{index $alphabet (toString (add1 (mod $i 3)))}}:us-east-1:{{ mul ( div 4294967295 $groupCount) $groupNum }}{{end}}
+    dynomite-{{$i}}.dynomite-svc.dynomite.svc.cluster.local:8101:us-east-1{{index $alphabet (toString (add1 (mod $i 3)))}}:us-east-1:{{ mul ( div 4294967295 $groupCount) $groupNum }}{{end}}
 ---
 apiVersion: v1
 kind: Service
