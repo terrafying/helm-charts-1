@@ -1,0 +1,175 @@
+{{ $alphabet := dict 1 "a" 2 "b" 3 "c" 4 "d" 5 "e" 6 "f" 7 "g" 8 "h" 9 "i" 10 "j" 11 "k" 12 "l" 13 "m" 14 "n" 15 "o" 16 "p" 17 "q" 18 "r" 19 "s" 20 "t" 21 "u" 22 "v" 23 "w" 24 "x" 25 "y" 26 "z"}}
+{{ $factor := 3}}
+{{ $quotient := div .Values.replicas $factor }}
+{{ $remainder := mod .Values.replicas $factor }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: dynomite-cm
+data:
+  http.js: |
+    var http = require('http');
+    var url = require('url');
+    
+    var seeds_file_path_arg = process.argv.slice(2);
+    
+    var seeds_file = require('fs');
+    var seeds_file_path = '/etc/dynomite/seeds.list';
+    
+    if(typeof seeds_file_path_arg == 'undefined' || seeds_file_path_arg == null || seeds_file_path_arg  == ''){
+    seeds_file_path = '/etc/dynomite/seeds.list';
+    } else{
+    seeds_file_path = seeds_file_path_arg;
+    }
+    
+    var server = http.createServer(function(req, res) {
+    var path = url.parse(req.url).pathname;
+    res.writeHead(200, {"Content-Type": "application/json"});
+    if (path == '/REST/v1/admin/get_seeds') {
+        data = seeds_file.readFileSync(seeds_file_path).toString();
+        data_oneline = data.trim().replace(/\n/g, '|');
+        var now = new Date();
+        var jsonDate = now.toJSON();
+        console.log(jsonDate + " - get_seeds [" + data_oneline + "]");
+        res.write(data_oneline);
+    }
+    res.end();
+    });
+    server.listen(8080);
+  {{range $i, $e := until (int .Values.replicas)}} {{ $groupNum := add1 (div $i $factor)}} {{ $groupCount := add $quotient (max  ( min (sub $remainder (mod $i $factor)) 1) 0) }}
+  dynomite-{{$i}}.yml: |   
+    dyn_o_mite:
+      datacenter: us-east-1
+      rack: us-east-1{{index $alphabet (toString (add1 (mod $i 3)))}}
+      dyn_listen: 0.0.0.0:8101
+      dyn_seed_provider: florida_provider
+      listen: 0.0.0.0:8102
+      servers:
+      - 127.0.0.1:22122:1
+      tokens: {{ mul ( div 4294967295 $groupCount) $groupNum }}
+      data_store: 0
+      stats_listen: 0.0.0.0:22222
+      auto_eject_hosts: true
+      preconnect: true
+  {{end}}
+  seeds.list: | {{range $i, $e := until (int .Values.replicas)}} {{ $groupNum := add1 (div $i $factor)}} {{ $groupCount := add $quotient (max  ( min (sub $remainder (mod $i $factor)) 1) 0) }}
+    - dynomite-{{$i}}.dynomite-svc.dynomite.svc.cluster.local:8101:us-east-1{{index $alphabet (toString (add1 (mod $i 3)))}}:us-east-1:{{ mul ( div 4294967295 $groupCount) $groupNum }}{{end}}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: dynomite-svc
+  name: dynomite-svc
+spec:
+  clusterIP: None
+  ports:
+  - name: peer
+    port: 8101
+    protocol: TCP
+    targetPort: 8101
+  - name: client
+    port: 8102
+    protocol: TCP
+    targetPort: 8102
+  - name: redis
+    port: 22122
+    protocol: TCP
+    targetPort: 22122
+  - name: stats
+    port: 22222
+    protocol: TCP
+    targetPort: 22222
+  selector:
+    app: dynomite
+  sessionAffinity: None
+  type: ClusterIP
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: dynomite
+  labels:
+    app: dynomite
+spec:
+  serviceName: dynomite-svc
+  replicas: {{ .Values.replicas }}
+  selector:
+    matchLabels:
+      app: dynomite
+  template:
+    metadata:
+      labels:
+        app: dynomite
+    spec:
+      containers:
+      - name: dynomite
+        image: v1r3n/dynomite
+        env:
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        command:
+        - /bin/bash
+        - -c
+        - src/dynomite --conf-file=conf/${POD_NAME}.yml -v11
+        resources:
+          limits:
+            cpu: 1000m
+            memory: 1Gi
+          requests:
+            cpu: 500m
+            memory: 512Mi
+        ports:
+        - name: peer
+          containerPort: 8101
+          protocol: TCP
+        - name: client
+          containerPort: 8102
+          protocol: TCP
+        volumeMounts:{{range $i, $e := until (int .Values.replicas)}}
+        - name: dynomite-config
+          mountPath: /dynomite/conf/dynomite-{{$i}}.yml
+          subPath: dynomite-{{$i}}.yml{{end}}
+      - name: http
+        image: node
+        command:
+        - /bin/bash
+        - -c
+        - node /http.js
+        ports:
+        - name: http
+          containerPort: 8080
+          protocol: TCP
+        volumeMounts:
+        - name: dynomite-config
+          mountPath: /http.js
+          subPath: http.js
+        - name: dynomite-config
+          mountPath: /etc/dynomite/seeds.list
+          subPath: seeds.list
+      - name: redis
+        image: v1r3n/dynomite
+        command:
+        - /bin/bash
+        - -c
+        - redis-server --port 22122 
+        resources:
+          limits:
+            cpu: 1000m
+            memory: 1Gi
+          requests:
+            cpu: 500m
+            memory: 512Mi
+        ports:
+        - name: redis
+          containerPort: 22122
+          protocol: TCP
+        - name: stats
+          containerPort: 22222
+          protocol: TCP
+      volumes:
+      - name: dynomite-config
+        configMap:
+          name: dynomite-cm
