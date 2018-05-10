@@ -50,7 +50,7 @@ data:
       data_store: 0
       stats_listen: 0.0.0.0:22222
       auto_eject_hosts: true
-      preconnect: true
+      preconnect: false
   {{end}}
   seeds.list: | {{range $i, $e := until (int .Values.replicas)}} {{ $groupNum := add1 (div $i $factor)}} {{ $groupCount := add $quotient (max  ( min (sub $remainder (mod $i $factor)) 1) 0) }}
     - dynomite-{{$i}}.dynomite-svc.dynomite.svc.cluster.local:8101:us-east-1{{index $alphabet (toString (add1 (mod $i 3)))}}:us-east-1:{{ mul ( div 4294967295 $groupCount) $groupNum }}{{end}}
