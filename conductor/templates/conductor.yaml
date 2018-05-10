@@ -1,0 +1,123 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: conductor-cm
+data:
+  conductor-server.properties: |
+    # Database persistence model.  Possible values are memory, redis, and dynomite.
+    # If ommitted, the persistence used is memory
+    #
+    # memory : The data is stored in memory and lost when the server dies.  Useful for testing or demo
+    # redis : non-Dynomite based redis instance
+    # dynomite : Dynomite cluster.  Use this for HA configuration.
+    
+    db=dynomite
+    
+    # Dynomite Cluster details.
+    # format is host:port:rack separated by semicolon
+    workflow.dynomite.cluster.hosts={{ .Values.dynomiteHosts }}
+    
+    # Dynomite cluster name
+    workflow.dynomite.cluster.name=coductor-cluster
+    
+    # Namespace for the keys stored in Dynomite/Redis
+    workflow.namespace.prefix=conductor
+    
+    # Namespace prefix for the dyno queues
+    workflow.namespace.queue.prefix=conductor_queues
+    
+    # No. of threads allocated to dyno-queues (optional)
+    queues.dynomite.threads=10
+    
+    # Non-quorum port used to connect to local redis.  Used by dyno-queues.
+    # When using redis directly, set this to the same port as redis server
+    # For Dynomite, this is 22122 by default or the local redis-server port used by Dynomite.
+    queues.dynomite.nonQuorum.port=22122
+    
+    # Transport address to elasticsearch
+    workflow.elasticsearch.url={{ .Values.esUrl }}
+    
+    workflow.elasticsearch.cluster.name={{ .Values.esClusterName }}
+    # Name of the elasticsearch cluster
+    workflow.elasticsearch.index.name=conductor
+    
+    # Additional modules (optional)
+    # conductor.additional.modules=class_extending_com.google.inject.AbstractModule
+    
+    # Load sample kitchen sink workflow
+    loadSample=true
+  log4j.properties: |
+    log4j.rootLogger=INFO,stdout
+    log4j.appender.stdout=org.apache.log4j.ConsoleAppender
+    log4j.appender.stdout.layout=org.apache.log4j.PatternLayout
+    log4j.appender.stdout.layout.ConversionPattern=%p\t%d{ISO8601}\t%r\t%c\t[%t]\t%m%n
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: conductor-svc
+  labels:
+    app: conductor
+    kubernetes.io/cluster-service: "true"
+    addonmanager.kubernetes.io/mode: Reconcile
+    kubernetes.io/name: "conductor"
+spec:
+  ports:
+  - name: ui
+    port: 5000
+    protocol: TCP
+    targetPort: 5000
+  - name: server
+    port: 8080
+    protocol: TCP
+    targetPort: 8080
+  selector:
+    app: conductor
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: conductor
+  labels:
+    app: conductor
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: conductor
+  template:
+    metadata:
+      labels:
+        app: conductor
+    spec:
+      containers:
+      - name: conductor-server
+        image: ihardz/conductor-server:latest
+        command:
+        - /bin/sh
+        - -c
+        - java -jar /app/libs/conductor-server-*-all.jar /app/config/conductor-server.properties /app/config/log4j.properties
+        ports:
+        - containerPort: 8080
+          name: server
+          protocol: TCP
+        volumeMounts:
+        - name: conductor-config
+          mountPath: /app/config/conductor-server.properties
+          subPath: conductor-server.properties
+        - name: conductor-config
+          mountPath: /app/config/log4j.properties
+          subPath: log4j.properties
+      - name: conductor-ui
+        image: ihardz/conductor-ui:latest
+        ports:
+        - containerPort: 5000
+          name: server
+          protocol: TCP
+      volumes:
+      - name: conductor-config
+        configMap:
+          name: conductor-cm
+        
+
+        
