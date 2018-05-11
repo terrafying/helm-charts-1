@@ -49,7 +49,7 @@ data:
     dyn_o_mite:
       datacenter: us-east-1
       rack: us-east-1{{index $alphabet (toString (add1 (mod $i 3)))}}
-      dyn_listen: dynomite-{{$i}}.dynomite-svc.dynomite.svc.cluster.local
+      dyn_listen: dynomite-{{$i}}.dynomite-svc.dynomite.svc.cluster.local:8101
       dyn_seed_provider: florida_provider
       listen: 0.0.0.0:8102
       servers:
