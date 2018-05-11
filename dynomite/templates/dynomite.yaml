@@ -11,37 +11,45 @@ data:
     var http = require('http');
     var url = require('url');
     
-    var seeds_file_path_arg = process.argv.slice(2);
+    // Seeds file path (hardcoded if no args provided)
+    var seeds_file_path = (process.argv[3] ? process.argv[3] : (process.argv[2] ? process.argv[2] : './etc/dynomite/seeds.list'));
+    
+    // Element to cut (no cut if second arg is not provided)
+    var withoutOne = (process.argv[3] ? process.argv[2] : (undefined));
+    
     
     var seeds_file = require('fs');
-    var seeds_file_path = '/etc/dynomite/seeds.list';
-    
-    if(typeof seeds_file_path_arg == 'undefined' || seeds_file_path_arg == null || seeds_file_path_arg  == ''){
-    seeds_file_path = '/etc/dynomite/seeds.list';
-    } else{
-    seeds_file_path = seeds_file_path_arg;
-    }
     
     var server = http.createServer(function(req, res) {
-    var path = url.parse(req.url).pathname;
-    res.writeHead(200, {"Content-Type": "application/json"});
-    if (path == '/REST/v1/admin/get_seeds') {
-        data = seeds_file.readFileSync(seeds_file_path).toString();
-        data_oneline = data.trim().replace(/\n/g, '|');
-        var now = new Date();
-        var jsonDate = now.toJSON();
-        console.log(jsonDate + " - get_seeds [" + data_oneline + "]");
-        res.write(data_oneline);
-    }
-    res.end();
+        var path = url.parse(req.url).pathname;
+        res.writeHead(200, {"Content-Type": "application/json"});
+    
+        if (path == '/REST/v1/admin/get_seeds') {
+            var data = seeds_file.readFileSync(seeds_file_path).toString().split('\n');
+            var data_oneline = '';
+    
+            data.forEach((one) => {
+                one = one.trim();
+                if (!withoutOne || !one.startsWith(withoutOne)) {
+                    data_oneline += one + '\n';
+                }
+            });
+    
+            var now = new Date();
+            var jsonDate = now.toJSON();
+            console.log(jsonDate + " - get_seeds:\n" + data_oneline + "\n");
+            res.write(data_oneline);
+        }
+    
+        res.end();
     });
-    server.listen(8080);
+    server.listen(8080); 
   {{range $i, $e := until (int .Values.replicas)}} {{ $groupNum := add1 (div $i $factor)}} {{ $groupCount := add $quotient (max  ( min (sub $remainder (mod $i $factor)) 1) 0) }}
   dynomite-{{$i}}.yml: |   
     dyn_o_mite:
       datacenter: us-east-1
       rack: us-east-1{{index $alphabet (toString (add1 (mod $i 3)))}}
-      dyn_listen: <IP_ADDRESS>
+      dyn_listen: dynomite-{{$i}}.dynomite-svc.dynomite.svc.cluster.local
       dyn_seed_provider: florida_provider
       listen: 0.0.0.0:8102
       servers:
@@ -100,24 +108,6 @@ spec:
       labels:
         app: dynomite
     spec:
-      initContainers:
-      - name: dyno-init
-        image: alpine:3.6
-        env:
-        - name: POD_NAME
-          valueFrom:
-            fieldRef:
-              fieldPath: metadata.name
-        - name: POD_IP
-          valueFrom:
-            fieldRef:
-              fieldPath: status.podIP
-        command:
-        - /bin/bash
-        - -c
-        - sleep 5 && echo "Host - ${POD_NAME} , IP - ${POD_IP}"
-        securityContext:
-          privileged: true
       containers:
       - name: dynomite
         image: v1r3n/dynomite
@@ -126,14 +116,10 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: metadata.name
-        - name: POD_IP
-          valueFrom:
-            fieldRef:
-              fieldPath: status.podIP
         command:
         - /bin/bash
         - -c
-        - sed -i -e "s/<IP_ADDRESS>/${POD_IP}/" conf/${POD_NAME}.yml && src/dynomite --conf-file=conf/${POD_NAME}.yml -v11
+        - src/dynomite --conf-file=conf/${POD_NAME}.yml -v11
         resources:
           limits:
             cpu: 1000m
@@ -154,10 +140,15 @@ spec:
           subPath: dynomite-{{$i}}.yml{{end}}
       - name: http
         image: node
+        env:
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
         command:
         - /bin/bash
         - -c
-        - node /http.js
+        - node /http.js $POD_NAME /etc/dynomite/seeds.list
         ports:
         - name: http
           containerPort: 8080
