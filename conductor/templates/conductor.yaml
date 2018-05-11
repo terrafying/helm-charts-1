@@ -18,7 +18,7 @@ data:
     workflow.dynomite.cluster.hosts={{ .Values.dynomiteHosts }}
     
     # Dynomite cluster name
-    workflow.dynomite.cluster.name=coductor-cluster
+    workflow.dynomite.cluster.name=dyn_o_mite
     
     # Namespace for the keys stored in Dynomite/Redis
     workflow.namespace.prefix=conductor
