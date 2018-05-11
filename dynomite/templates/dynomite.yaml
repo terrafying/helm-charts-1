@@ -25,15 +25,15 @@ data:
         res.writeHead(200, {"Content-Type": "application/json"});
     
         if (path == '/REST/v1/admin/get_seeds') {
-            var data = seeds_file.readFileSync(seeds_file_path).toString().split('\n');
-            var data_oneline = '';
+            var data = seeds_file.readFileSync(seeds_file_path).toString();
+            var data_oneline = data.trim().replace(/\n/g, '|');
+            data_oneline = data_oneline.split('|');
     
-            data.forEach((one) => {
-                one = one.trim();
-                if (!withoutOne || !one.startsWith(withoutOne)) {
-                    data_oneline += one + '\n';
-                }
+            data_oneline = data_oneline.filter((one) => {
+                return !one.startsWith(withoutOne);
             });
+    
+            data_oneline = data_oneline.join('|');
     
             var now = new Date();
             var jsonDate = now.toJSON();
