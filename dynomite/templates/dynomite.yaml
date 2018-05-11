@@ -100,6 +100,24 @@ spec:
       labels:
         app: dynomite
     spec:
+      initContainers:
+      - name: dyno-init
+        image: alpine:3.6
+        env:
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        - name: POD_IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.podIP
+        command:
+        - /bin/bash
+        - -c
+        - sleep 5 && echo "Host: ${POD_NAME} , IP: ${POD_IP}"
+        securityContext:
+          privileged: true
       containers:
       - name: dynomite
         image: v1r3n/dynomite
