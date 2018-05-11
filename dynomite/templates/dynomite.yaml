@@ -41,7 +41,7 @@ data:
     dyn_o_mite:
       datacenter: us-east-1
       rack: us-east-1{{index $alphabet (toString (add1 (mod $i 3)))}}
-      dyn_listen: dynomite-{{$i}}.dynomite-svc.dynomite.svc.cluster.local:8101
+      dyn_listen: <IP_ADDRESS>
       dyn_seed_provider: florida_provider
       listen: 0.0.0.0:8102
       servers:
@@ -108,10 +108,14 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: metadata.name
+        - name: POD_IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.podIP
         command:
         - /bin/bash
         - -c
-        - src/dynomite --conf-file=conf/${POD_NAME}.yml -v11
+        - sed -i -e "s/<IP_ADDRESS>/${POD_IP}/" conf/${POD_NAME}.yml && src/dynomite --conf-file=conf/${POD_NAME}.yml -v11
         resources:
           limits:
             cpu: 1000m
