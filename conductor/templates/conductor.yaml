@@ -90,6 +90,9 @@ spec:
       labels:
         app: conductor
     spec:
+      hostNetwork: true
+      hostPID: true
+      dnsPolicy: ClusterFirstWithHostNet
       containers:
       - name: conductor-server
         image: ihardz/conductor-server:latest
