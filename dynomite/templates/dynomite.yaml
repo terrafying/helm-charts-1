@@ -122,7 +122,7 @@ spec:
         command:
         - /bin/bash
         - -c
-        - src/dynomite --conf-file=conf/${POD_NAME}.yml -v11
+        - src/dynomite --conf-file=conf/${POD_NAME}.yml -v5
         resources:
           limits:
             cpu: 1000m
