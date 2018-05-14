@@ -45,7 +45,7 @@ data:
     });
     server.listen(8080); 
   {{range $i, $e := until (int .Values.replicas)}} {{ $groupNum := add1 (div $i $factor)}} {{ $groupCount := add $quotient (max  ( min (sub $remainder (mod $i $factor)) 1) 0) }}
-  dynomite-{{$i}}.yml: |   
+  dynomite-{{$i}}.yml: |
     dyn_o_mite:
       datacenter: us-east-1
       rack: us-east-1{{index $alphabet (toString (add1 (mod $i 3)))}}
@@ -100,6 +100,7 @@ metadata:
 spec:
   serviceName: dynomite-svc
   replicas: {{ .Values.replicas }}
+  podManagementPolicy: OrderedReady
   selector:
     matchLabels:
       app: dynomite

@@ -1,51 +1,30 @@
+{{ $alphabet := dict 1 "a" 2 "b" 3 "c" 4 "d" 5 "e" 6 "f" 7 "g" 8 "h" 9 "i" 10 "j" 11 "k" 12 "l" 13 "m" 14 "n" 15 "o" 16 "p" 17 "q" 18 "r" 19 "s" 20 "t" 21 "u" 22 "v" 23 "w" 24 "x" 25 "y" 26 "z"}}
+{{ $factor := 3}}
+{{ $dynomiteHosts := dict "a" .Values.dynomiteHostsA "b" .Values.dynomiteHostsB "c" .Values.dynomiteHostsC }}
 apiVersion: v1
 kind: ConfigMap
 metadata:
   name: conductor-cm
-data:
-  conductor-server.properties: |
-    # Database persistence model.  Possible values are memory, redis, and dynomite.
-    # If ommitted, the persistence used is memory
-    #
-    # memory : The data is stored in memory and lost when the server dies.  Useful for testing or demo
-    # redis : non-Dynomite based redis instance
-    # dynomite : Dynomite cluster.  Use this for HA configuration.
-    
+data: {{range $i, $e := until $factor}} {{ $group := index $alphabet (toString (add1 (mod $i 3))) }}
+  conductor-server-{{ $group }}.properties: |
     db=dynomite
-    
     # Dynomite Cluster details.
     # format is host:port:rack separated by semicolon
-    workflow.dynomite.cluster.hosts={{ .Values.dynomiteHosts }}
-    
-    # Dynomite cluster name
+    workflow.dynomite.cluster.hosts={{index $dynomiteHosts $group}}
     workflow.dynomite.cluster.name=dyn_o_mite
-    
-    # Namespace for the keys stored in Dynomite/Redis
     workflow.namespace.prefix=conductor
-    
-    # Namespace prefix for the dyno queues
     workflow.namespace.queue.prefix=conductor_queues
-    
-    # No. of threads allocated to dyno-queues (optional)
     queues.dynomite.threads=10
-    
-    # Non-quorum port used to connect to local redis.  Used by dyno-queues.
-    # When using redis directly, set this to the same port as redis server
-    # For Dynomite, this is 22122 by default or the local redis-server port used by Dynomite.
     queues.dynomite.nonQuorum.port=22122
-    
     # Transport address to elasticsearch
-    workflow.elasticsearch.url={{ .Values.esUrl }}
-    
-    workflow.elasticsearch.cluster.name={{ .Values.esClusterName }}
-    # Name of the elasticsearch cluster
+    workflow.elasticsearch.url={{ $.Values.esUrl }}
+    workflow.elasticsearch.cluster.name={{ $.Values.esClusterName }}
     workflow.elasticsearch.index.name=conductor
-    
-    # Additional modules (optional)
-    # conductor.additional.modules=class_extending_com.google.inject.AbstractModule
-    
     # Load sample kitchen sink workflow
-    loadSample=true
+    loadSample=true    
+    EC2_REGION=us-east-1
+    EC2_AVAILABILITY_ZONE=us-east-1{{ $group }} 
+    {{end}}
   log4j.properties: |
     log4j.rootLogger=INFO,stdout
     log4j.appender.stdout=org.apache.log4j.ConsoleAppender
@@ -73,15 +52,16 @@ spec:
     targetPort: 8080
   selector:
     app: conductor
+{{range $i, $e := until $factor}} {{ $group := index $alphabet (toString (add1 (mod $i 3))) }}
 ---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: conductor
+  name: conductor-{{ $group }}
   labels:
     app: conductor
 spec:
-  replicas: 1
+  replicas: {{ $.Values.replicas }}
   selector:
     matchLabels:
       app: conductor
@@ -90,24 +70,21 @@ spec:
       labels:
         app: conductor
     spec:
-      hostNetwork: true
-      hostPID: true
-      dnsPolicy: ClusterFirstWithHostNet
       containers:
       - name: conductor-server
         image: ihardz/conductor-server:latest
         command:
         - /bin/sh
         - -c
-        - java -jar /app/libs/conductor-server-*-all.jar /app/config/conductor-server.properties /app/config/log4j.properties
+        - java -jar /app/libs/conductor-server-*-all.jar /app/config/conductor-server-{{ $group }}.properties /app/config/log4j.properties
         ports:
         - containerPort: 8080
           name: server
           protocol: TCP
         volumeMounts:
         - name: conductor-config
-          mountPath: /app/config/conductor-server.properties
-          subPath: conductor-server.properties
+          mountPath: /app/config/conductor-server-{{ $group }}.properties
+          subPath: conductor-server-{{ $group }}.properties
         - name: conductor-config
           mountPath: /app/config/log4j.properties
           subPath: log4j.properties
@@ -121,6 +98,14 @@ spec:
       - name: conductor-config
         configMap:
           name: conductor-cm
-        
-
-        
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchExpressions:
+              - key: app
+                operator: In
+                values:
+                - conductor
+            topologyKey: kubernetes.io/hostname
+{{end}}

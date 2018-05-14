@@ -14,7 +14,7 @@
 # limitations under the License.
 apiVersion: v1
 name: conductor
-version: 0.1.0
+version: 0.1.1
 appVersion: 1.9.0
 keywords:
 - conductor
