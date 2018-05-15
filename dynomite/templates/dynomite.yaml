@@ -28,8 +28,7 @@ data:
     
         if (path == '/REST/v1/admin/get_seeds') {
             var data = fs.readFileSync(seeds_file_path).toString();
-            var data_oneline = data.trim().replace(/\n/g, '|');
-            data_oneline = data_oneline.split('|');
+            var data_oneline = data.trim().split('\n');
     
             data_oneline = data_oneline.filter((one) => {
                 return !one.startsWith(withoutOne);
@@ -47,7 +46,7 @@ data:
                     dns.lookup(matches[1], (err, result) => {
                         if (err) {
                             console.log(err);
-                            return resolve('error');
+                            return resolve('');
                         }
     
                         return resolve(result + matches[2]);
@@ -58,6 +57,9 @@ data:
     
             // All lookups are finished
             Promise.all(promises).then((values) => {
+                values = values.filter((one) => {
+                    return !!one;
+                });
                 var data_oneline = values.join('|');
     
                 var now = new Date();
