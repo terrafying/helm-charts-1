@@ -98,14 +98,4 @@ spec:
       - name: conductor-config
         configMap:
           name: conductor-cm
-      affinity:
-        podAntiAffinity:
-          requiredDuringSchedulingIgnoredDuringExecution:
-          - labelSelector:
-              matchExpressions:
-              - key: app
-                operator: In
-                values:
-                - conductor
-            topologyKey: kubernetes.io/hostname
 {{end}}
