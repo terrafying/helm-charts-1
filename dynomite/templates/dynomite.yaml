@@ -7,25 +7,27 @@ kind: ConfigMap
 metadata:
   name: dynomite-cm
 data:
-  http.js: |
+  florida.js: |
     var http = require('http');
     var url = require('url');
+    var fs = require('fs');
+    var dns = require('dns');
     
     // Seeds file path (hardcoded if no args provided)
+    // Second arg (first if no second provided)
     var seeds_file_path = (process.argv[3] ? process.argv[3] : (process.argv[2] ? process.argv[2] : './etc/dynomite/seeds.list'));
     
     // Element to cut (no cut if second arg is not provided)
+    // First arg
     var withoutOne = (process.argv[3] ? process.argv[2] : (undefined));
     
-    
-    var seeds_file = require('fs');
     
     var server = http.createServer(function(req, res) {
         var path = url.parse(req.url).pathname;
         res.writeHead(200, {"Content-Type": "application/json"});
     
         if (path == '/REST/v1/admin/get_seeds') {
-            var data = seeds_file.readFileSync(seeds_file_path).toString();
+            var data = fs.readFileSync(seeds_file_path).toString();
             var data_oneline = data.trim().replace(/\n/g, '|');
             data_oneline = data_oneline.split('|');
     
@@ -33,17 +35,44 @@ data:
                 return !one.startsWith(withoutOne);
             });
     
-            data_oneline = data_oneline.join('|');
+            // Replacing with ip
+            var matches;
+            var promises = [];
+            data_oneline.forEach((row) => {
     
-            var now = new Date();
-            var jsonDate = now.toJSON();
-            console.log(jsonDate + " - get_seeds:\n" + data_oneline + "\n");
-            res.write(data_oneline);
+                matches = row.match(/^([^:]+)(.*)/);
+    
+                // Waiting for these promises...
+                promises.push(new Promise((resolve, reject) => {
+                    dns.lookup(matches[1], (err, result) => {
+                        if (err) {
+                            console.log(err);
+                            return resolve('error');
+                        }
+    
+                        return resolve(result + matches[2]);
+                    });
+                }));
+    
+            });
+    
+            // All lookups are finished
+            Promise.all(promises).then((values) => {
+                var data_oneline = values.join('|');
+    
+                var now = new Date();
+                var jsonDate = now.toJSON();
+                console.log(jsonDate + " - get_seeds [" + data_oneline + "]");
+                res.write(data_oneline);
+    
+                res.end();
+            });
+    
+        } else {
+            res.end();
         }
-    
-        res.end();
     });
-    server.listen(8080); 
+    server.listen(8080);
   {{range $i, $e := until (int .Values.replicas)}} {{ $groupNum := add1 (div $i $factor)}} {{ $groupCount := add $quotient (max  ( min (sub $remainder (mod $i $factor)) 1) 0) }}
   dynomite-{{$i}}.yml: |
     dyn_o_mite:
@@ -148,15 +177,15 @@ spec:
         command:
         - /bin/bash
         - -c
-        - node /http.js $POD_NAME /etc/dynomite/seeds.list
+        - node /florida.js $POD_NAME /etc/dynomite/seeds.list
         ports:
         - name: http
           containerPort: 8080
           protocol: TCP
         volumeMounts:
         - name: dynomite-config
-          mountPath: /http.js
-          subPath: http.js
+          mountPath: /florida.js
+          subPath: florida.js
         - name: dynomite-config
           mountPath: /etc/dynomite/seeds.list
           subPath: seeds.list
