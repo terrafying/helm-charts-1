@@ -60,7 +60,7 @@ data:
                 values = values.filter((one) => {
                     return !!one;
                 });
-                var data_oneline = values.join('|');
+                var data_oneline = values.join('\r|');
     
                 var now = new Date();
                 var jsonDate = now.toJSON();
