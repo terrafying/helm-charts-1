@@ -87,6 +87,9 @@ data:
       data_store: 0
       stats_listen: 0.0.0.0:22222
       auto_eject_hosts: true
+      server_retry_timeout: 30000
+      server_failure_limit: 3
+      timeout: 400
       read_consistency: dc_safe_quorum
       write_consistency: dc_safe_quorum
   {{end}}
