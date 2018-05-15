@@ -238,7 +238,7 @@ spec:
             fieldRef:
               fieldPath: metadata.name
         - name: DYNOMITE_FLORIDA_PORT
-          value: 18088
+          value: "18088"
         command:
         - /bin/bash
         - -c
