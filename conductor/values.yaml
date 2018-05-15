@@ -25,4 +25,4 @@ esUrl: es-svc.elastic5:9300
 
 esClusterName: conductor
 
-replicas: 1
+replicas: 2
