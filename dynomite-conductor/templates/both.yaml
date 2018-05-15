@@ -118,8 +118,8 @@ data: {{range $i, $e := until (int .Values.replicas)}} {{ $groupNum := add1 (div
     workflow.elasticsearch.index.name=conductor
     # Load sample kitchen sink workflow
     loadSample=true
-    EC2_REGION=us-east-1
-    EC2_AVAILABILITY_ZONE=us-east-1{{index $alphabet (toString (add1 (mod $i 3)))}}
+    # EC2_REGION=us-east-1
+    # EC2_AVAILABILITY_ZONE=us-east-1{{index $alphabet (toString (add1 (mod $i 3)))}}
     {{end}}
   log4j.properties: |
     log4j.rootLogger=INFO,stdout
