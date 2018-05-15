@@ -95,7 +95,7 @@ data:
       write_consistency: dc_safe_quorum
   {{end}}
   seeds.list: | {{range $i, $e := until (int .Values.replicas)}} {{ $groupNum := add1 (div $i $factor)}} {{ $groupCount := add $quotient (max  ( min (sub $remainder (mod $i $factor)) 1) 0) }}
-    dynomite-{{$i}}.dynomite-svc.dynomite.svc.cluster.local:8101:us-east-1{{index $alphabet (toString (add1 (mod $i 3)))}}:us-east-1:{{ mul ( div 4294967295 $groupCount) $groupNum }}{{end}}
+    dynomite-conductor-{{$i}}.dynomite-svc.netflix.svc.cluster.local:8101:us-east-1{{index $alphabet (toString (add1 (mod $i 3)))}}:us-east-1:{{ mul ( div 4294967295 $groupCount) $groupNum }}{{end}}
 ---
 apiVersion: v1
 kind: ConfigMap
@@ -106,7 +106,7 @@ data: {{range $i, $e := until (int .Values.replicas)}} {{ $groupNum := add1 (div
     db=dynomite
     # Dynomite Cluster details.
     # format is host:port:rack separated by semicolon
-    workflow.dynomite.cluster.hosts=dynomite-{{$i}}.dynomite-svc.dynomite.svc.cluster.local:8102:us-east-1{{index $alphabet (toString (add1 (mod $i 3)))}}
+    workflow.dynomite.cluster.hosts=dynomite-conductor-{{$i}}.dynomite-svc.netflix.svc.cluster.local:8102:us-east-1{{index $alphabet (toString (add1 (mod $i 3)))}}
     workflow.dynomite.cluster.name=dyn_o_mite
     workflow.namespace.prefix=conductor
     workflow.namespace.queue.prefix=conductor_queues
