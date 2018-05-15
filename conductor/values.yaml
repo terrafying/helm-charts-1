@@ -15,7 +15,7 @@
 
 # Default values for template variables.
 
-dynomiteHostsA: dynomite-0.dynomite-svc.dynomite.svc.cluster.local:8102:us-east-1a;
+dynomiteHostsA: dynomite-0.dynomite-svc.dynomite.svc.cluster.local:8102:us-east-1a
 
 dynomiteHostsB: dynomite-1.dynomite-svc.dynomite.svc.cluster.local:8102:us-east-1b
 
