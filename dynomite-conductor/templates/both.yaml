@@ -205,9 +205,6 @@ spec:
           limits:
             cpu: 1000m
             memory: 1Gi
-          requests:
-            cpu: 500m
-            memory: 512Mi
         ports:
         - name: redis
           containerPort: 22122
