@@ -106,7 +106,7 @@ data: {{range $i, $e := until (int .Values.replicas)}} {{ $groupNum := add1 (div
     db=dynomite
     # Dynomite Cluster details.
     # format is host:port:rack separated by semicolon
-    workflow.dynomite.cluster.hosts=dynomite-conductor-{{$i}}.dynomite-svc.netflix.svc.cluster.local:8102:us-east-1{{index $alphabet (toString (add1 (mod $i 3)))}}
+    workflow.dynomite.cluster.hosts=dynomite-conductor-0.dynomite-svc.netflix.svc.cluster.local:8102:us-east-1a;dynomite-conductor-1.dynomite-svc.netflix.svc.cluster.local:8102:us-east-1b;dynomite-conductor-2.dynomite-svc.netflix.svc.cluster.local:8102:us-east-1c
     workflow.dynomite.cluster.name=dyn_o_mite
     workflow.namespace.prefix=conductor
     workflow.namespace.queue.prefix=conductor_queues
