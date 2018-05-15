@@ -145,6 +145,48 @@ spec:
         app: dynomite
     spec:
       containers:
+      - name: redis
+        image: v1r3n/dynomite
+        command:
+        - /bin/bash
+        - -c
+        - redis-server --port 22122 
+        resources:
+          limits:
+            cpu: 1000m
+            memory: 1Gi
+          requests:
+            cpu: 500m
+            memory: 512Mi
+        ports:
+        - name: redis
+          containerPort: 22122
+          protocol: TCP
+        - name: stats
+          containerPort: 22222
+          protocol: TCP
+      - name: http
+        image: node
+        env:
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        command:
+        - /bin/bash
+        - -c
+        - node /florida.js $POD_NAME /etc/dynomite/seeds.list
+        ports:
+        - name: http
+          containerPort: 8080
+          protocol: TCP
+        volumeMounts:
+        - name: dynomite-config
+          mountPath: /florida.js
+          subPath: florida.js
+        - name: dynomite-config
+          mountPath: /etc/dynomite/seeds.list
+          subPath: seeds.list
       - name: dynomite
         image: v1r3n/dynomite
         env:
@@ -171,48 +213,6 @@ spec:
         - name: dynomite-config
           mountPath: /dynomite/conf/dynomite-{{$i}}.yml
           subPath: dynomite-{{$i}}.yml{{end}}
-      - name: http
-        image: node
-        env:
-        - name: POD_NAME
-          valueFrom:
-            fieldRef:
-              fieldPath: metadata.name
-        command:
-        - /bin/bash
-        - -c
-        - node /florida.js $POD_NAME /etc/dynomite/seeds.list
-        ports:
-        - name: http
-          containerPort: 8080
-          protocol: TCP
-        volumeMounts:
-        - name: dynomite-config
-          mountPath: /florida.js
-          subPath: florida.js
-        - name: dynomite-config
-          mountPath: /etc/dynomite/seeds.list
-          subPath: seeds.list
-      - name: redis
-        image: v1r3n/dynomite
-        command:
-        - /bin/bash
-        - -c
-        - redis-server --port 22122 
-        resources:
-          limits:
-            cpu: 1000m
-            memory: 1Gi
-          requests:
-            cpu: 500m
-            memory: 512Mi
-        ports:
-        - name: redis
-          containerPort: 22122
-          protocol: TCP
-        - name: stats
-          containerPort: 22222
-          protocol: TCP
       volumes:
       - name: dynomite-config
         configMap:
