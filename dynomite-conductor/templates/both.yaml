@@ -1,0 +1,300 @@
+{{ $alphabet := dict 1 "a" 2 "b" 3 "c" 4 "d" 5 "e" 6 "f" 7 "g" 8 "h" 9 "i" 10 "j" 11 "k" 12 "l" 13 "m" 14 "n" 15 "o" 16 "p" 17 "q" 18 "r" 19 "s" 20 "t" 21 "u" 22 "v" 23 "w" 24 "x" 25 "y" 26 "z"}}
+{{ $factor := 3}}
+{{ $quotient := div .Values.replicas $factor }}
+{{ $remainder := mod .Values.replicas $factor }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: dynomite-cm
+data:
+  florida.js: |
+    var http = require('http');
+    var url = require('url');
+    var fs = require('fs');
+    var dns = require('dns');
+    
+    // Seeds file path (hardcoded if no args provided)
+    // Second arg (first if no second provided)
+    var seeds_file_path = (process.argv[3] ? process.argv[3] : (process.argv[2] ? process.argv[2] : './etc/dynomite/seeds.list'));
+    
+    // Element to cut (no cut if second arg is not provided)
+    // First arg
+    var withoutOne = (process.argv[3] ? process.argv[2] : (undefined));
+    
+    
+    var server = http.createServer(function(req, res) {
+        var path = url.parse(req.url).pathname;
+        res.writeHead(200, {"Content-Type": "application/json"});
+    
+        if (path == '/REST/v1/admin/get_seeds') {
+            var data = fs.readFileSync(seeds_file_path).toString();
+            var data_oneline = data.trim().split('\n');
+    
+            data_oneline = data_oneline.filter((one) => {
+                return !one.startsWith(withoutOne);
+            });
+    
+            // Replacing with ip
+            var promises = [];
+            data_oneline.forEach((row) => {
+    
+                var matches = row.match(/^([^:]+)(.*)/);
+    
+                // Waiting for these promises...
+                promises.push(new Promise((resolve, reject) => {
+                    dns.lookup(matches[1], (err, result) => {
+                        if (err) {
+                            console.log(err);
+                            return resolve('');
+                        }
+    
+                        return resolve(result + matches[2]);
+                    });
+                }));
+    
+            });
+    
+            // All lookups are finished
+            Promise.all(promises).then((values) => {
+                values = values.filter((one) => {
+                    return !!one;
+                });
+                var data_oneline = values.join('\r|');
+    
+                var now = new Date();
+                var jsonDate = now.toJSON();
+                console.log(jsonDate + " - get_seeds [" + data_oneline + "]");
+                res.write(data_oneline);
+    
+                res.end();
+            });
+    
+        } else {
+            res.end();
+        }
+    });
+    server.listen(8080);
+  {{range $i, $e := until (int .Values.replicas)}} {{ $groupNum := add1 (div $i $factor)}} {{ $groupCount := add $quotient (max  ( min (sub $remainder (mod $i $factor)) 1) 0) }}
+  dynomite-{{$i}}.yml: |
+    dyn_o_mite:
+      datacenter: us-east-1
+      rack: us-east-1{{index $alphabet (toString (add1 (mod $i 3)))}}
+      dyn_listen: 0.0.0.0:8101
+      dyn_seed_provider: florida_provider
+      listen: 0.0.0.0:8102
+      servers:
+      - 127.0.0.1:22122:1
+      tokens: {{ mul ( div 4294967295 $groupCount) $groupNum }}
+      data_store: 0
+      stats_listen: 0.0.0.0:22222
+      auto_eject_hosts: true
+      server_retry_timeout: 30000
+      server_failure_limit: 3
+      timeout: 400
+      read_consistency: dc_safe_quorum
+      write_consistency: dc_safe_quorum
+  {{end}}
+  seeds.list: | {{range $i, $e := until (int .Values.replicas)}} {{ $groupNum := add1 (div $i $factor)}} {{ $groupCount := add $quotient (max  ( min (sub $remainder (mod $i $factor)) 1) 0) }}
+    dynomite-{{$i}}.dynomite-svc.dynomite.svc.cluster.local:8101:us-east-1{{index $alphabet (toString (add1 (mod $i 3)))}}:us-east-1:{{ mul ( div 4294967295 $groupCount) $groupNum }}{{end}}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: conductor-cm
+data: {{range $i, $e := until (int .Values.replicas)}} {{ $groupNum := add1 (div $i $factor)}} {{ $groupCount := add $quotient (max  ( min (sub $remainder (mod $i $factor)) 1) 0) }}
+  conductor-{{$i}}.properties: |
+    db=dynomite
+    # Dynomite Cluster details.
+    # format is host:port:rack separated by semicolon
+    workflow.dynomite.cluster.hosts=dynomite-{{$i}}.dynomite-svc.dynomite.svc.cluster.local:8102:us-east-1{{index $alphabet (toString (add1 (mod $i 3)))}}
+    workflow.dynomite.cluster.name=dyn_o_mite
+    workflow.namespace.prefix=conductor
+    workflow.namespace.queue.prefix=conductor_queues
+    queues.dynomite.threads=10
+    queues.dynomite.nonQuorum.port=22122
+    # Transport address to elasticsearch
+    workflow.elasticsearch.url={{ $.Values.esUrl }}
+    workflow.elasticsearch.cluster.name={{ $.Values.esClusterName }}
+    workflow.elasticsearch.index.name=conductor
+    # Load sample kitchen sink workflow
+    loadSample=true
+    EC2_REGION=us-east-1
+    EC2_AVAILABILITY_ZONE=us-east-1{{index $alphabet (toString (add1 (mod $i 3)))}}
+    {{end}}
+  log4j.properties: |
+    log4j.rootLogger=INFO,stdout
+    log4j.appender.stdout=org.apache.log4j.ConsoleAppender
+    log4j.appender.stdout.layout=org.apache.log4j.PatternLayout
+    log4j.appender.stdout.layout.ConversionPattern=%p\t%d{ISO8601}\t%r\t%c\t[%t]\t%m%n
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: dynomite-svc
+  name: dynomite-svc
+spec:
+  clusterIP: None
+  ports:
+  - name: peer
+    port: 8101
+    protocol: TCP
+    targetPort: 8101
+  - name: client
+    port: 8102
+    protocol: TCP
+    targetPort: 8102
+  - name: redis
+    port: 22122
+    protocol: TCP
+    targetPort: 22122
+  - name: stats
+    port: 22222
+    protocol: TCP
+    targetPort: 22222
+  selector:
+    app: dynomite-conductor
+  sessionAffinity: None
+  type: ClusterIP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: conductor-svc
+  labels:
+    app: dynomite-conductor
+spec:
+  ports:
+  - name: ui
+    port: 5000
+    protocol: TCP
+    targetPort: 5000
+  - name: server
+    port: 8080
+    protocol: TCP
+    targetPort: 8080
+  selector:
+    app: dynomite-conductor
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: dynomite-conductor
+  labels:
+    app: dynomite-conductor
+spec:
+  serviceName: dynomite-svc
+  replicas: {{ .Values.replicas }}
+  podManagementPolicy: OrderedReady
+  selector:
+    matchLabels:
+      app: dynomite-conductor
+  template:
+    metadata:
+      labels:
+        app: dynomite-conductor
+    spec:
+      containers:
+      - name: redis
+        image: v1r3n/dynomite
+        command:
+        - /bin/bash
+        - -c
+        - redis-server --port 22122 
+        resources:
+          limits:
+            cpu: 1000m
+            memory: 1Gi
+          requests:
+            cpu: 500m
+            memory: 512Mi
+        ports:
+        - name: redis
+          containerPort: 22122
+          protocol: TCP
+        - name: stats
+          containerPort: 22222
+          protocol: TCP
+      - name: http
+        image: node
+        env:
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        command:
+        - /bin/bash
+        - -c
+        - node /florida.js $POD_NAME /etc/dynomite/seeds.list
+        ports:
+        - name: http
+          containerPort: 8080
+          protocol: TCP
+        volumeMounts:
+        - name: dynomite-config
+          mountPath: /florida.js
+          subPath: florida.js
+        - name: dynomite-config
+          mountPath: /etc/dynomite/seeds.list
+          subPath: seeds.list
+      - name: dynomite
+        image: v1r3n/dynomite
+        env:
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        command:
+        - /bin/bash
+        - -c
+        - src/dynomite --conf-file=conf/$(echo $POD_NAME | sed -e 's/\-conductor//').yml -v5
+        resources:
+          limits:
+            cpu: 1000m
+            memory: 1Gi
+        ports:
+        - name: peer
+          containerPort: 8101
+          protocol: TCP
+        - name: client
+          containerPort: 8102
+          protocol: TCP
+        volumeMounts:{{range $i, $e := until (int .Values.replicas)}}
+        - name: dynomite-config
+          mountPath: /dynomite/conf/dynomite-{{$i}}.yml
+          subPath: dynomite-{{$i}}.yml{{end}}
+      - name: conductor-server
+        image: ihardz/conductor-server:latest
+        env:
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        command:
+        - /bin/sh
+        - -c
+        - java -jar /app/libs/conductor-server-*-all.jar /app/config/$(echo $POD_NAME | sed -e 's/dynomite\-//').properties /app/config/log4j.properties
+        ports:
+        - containerPort: 8080
+          name: server
+          protocol: TCP
+        volumeMounts:{{range $i, $e := until (int .Values.replicas)}}
+        - name: conductor-config
+          mountPath: /app/config/conductor-{{$i}}.properties
+          subPath: conductor-{{$i}}.properties{{end}}
+        - name: conductor-config
+          mountPath: /app/config/log4j.properties
+          subPath: log4j.properties
+      - name: conductor-ui
+        image: ihardz/conductor-ui:latest
+        ports:
+        - containerPort: 5000
+          name: server
+          protocol: TCP
+      volumes:
+      - name: dynomite-config
+        configMap:
+          name: dynomite-cm
+      - name: conductor-config
+        configMap:
+          name: conductor-cm
