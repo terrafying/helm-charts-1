@@ -21,7 +21,7 @@ data: {{range $i, $e := until $factor}} {{ $group := index $alphabet (toString (
     workflow.elasticsearch.cluster.name={{ $.Values.esClusterName }}
     workflow.elasticsearch.index.name=conductor
     # Load sample kitchen sink workflow
-    loadSample=true    
+    loadSample=true
     EC2_REGION=us-east-1
     EC2_AVAILABILITY_ZONE=us-east-1{{ $group }} 
     {{end}}
