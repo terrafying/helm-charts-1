@@ -78,7 +78,7 @@ data:
     dyn_o_mite:
       datacenter: us-east-1
       rack: us-east-1{{index $alphabet (toString (add1 (mod $i 3)))}}
-      dyn_listen: dynomite-{{$i}}.dynomite-svc.dynomite.svc.cluster.local:8101
+      dyn_listen: 0.0.0.0:8101
       dyn_seed_provider: florida_provider
       listen: 0.0.0.0:8102
       servers:
@@ -86,8 +86,8 @@ data:
       tokens: {{ mul ( div 4294967295 $groupCount) $groupNum }}
       data_store: 0
       stats_listen: 0.0.0.0:22222
-      read_consistency: dc_quorum
-      write_consistency: dc_quorum
+      read_consistency: dc_safe_quorum
+      write_consistency: dc_safe_quorum
   {{end}}
   seeds.list: | {{range $i, $e := until (int .Values.replicas)}} {{ $groupNum := add1 (div $i $factor)}} {{ $groupCount := add $quotient (max  ( min (sub $remainder (mod $i $factor)) 1) 0) }}
     dynomite-{{$i}}.dynomite-svc.dynomite.svc.cluster.local:8101:us-east-1{{index $alphabet (toString (add1 (mod $i 3)))}}:us-east-1:{{ mul ( div 4294967295 $groupCount) $groupNum }}{{end}}
