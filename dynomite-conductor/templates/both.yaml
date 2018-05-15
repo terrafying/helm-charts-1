@@ -73,7 +73,7 @@ data:
             res.end();
         }
     });
-    server.listen(8080);
+    server.listen(18088);
   {{range $i, $e := until (int .Values.replicas)}} {{ $groupNum := add1 (div $i $factor)}} {{ $groupCount := add $quotient (max  ( min (sub $remainder (mod $i $factor)) 1) 0) }}
   dynomite-{{$i}}.yml: |
     dyn_o_mite:
@@ -221,7 +221,7 @@ spec:
         - node /florida.js $POD_NAME /etc/dynomite/seeds.list
         ports:
         - name: http
-          containerPort: 8080
+          containerPort: 18088
           protocol: TCP
         volumeMounts:
         - name: dynomite-config
@@ -237,6 +237,8 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: metadata.name
+        - name: DYNOMITE_FLORIDA_PORT
+          value: 18088
         command:
         - /bin/bash
         - -c
@@ -262,7 +264,7 @@ spec:
         command:
         - /bin/sh
         - -c
-        - java -jar /app/libs/conductor-server-*-all.jar /app/config/$(echo $POD_NAME | sed -e 's/dynomite\-//').properties /app/config/log4j.properties
+        - sleep 120 && java -jar /app/libs/conductor-server-*-all.jar /app/config/$(echo $POD_NAME | sed -e 's/dynomite\-//').properties /app/config/log4j.properties
         ports:
         - containerPort: 8080
           name: server
