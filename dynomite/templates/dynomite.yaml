@@ -35,11 +35,10 @@ data:
             });
     
             // Replacing with ip
-            var matches;
             var promises = [];
             data_oneline.forEach((row) => {
     
-                matches = row.match(/^([^:]+)(.*)/);
+                var matches = row.match(/^([^:]+)(.*)/);
     
                 // Waiting for these promises...
                 promises.push(new Promise((resolve, reject) => {
