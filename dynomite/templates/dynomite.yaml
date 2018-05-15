@@ -86,6 +86,7 @@ data:
       tokens: {{ mul ( div 4294967295 $groupCount) $groupNum }}
       data_store: 0
       stats_listen: 0.0.0.0:22222
+      auto_eject_hosts: true
       read_consistency: dc_safe_quorum
       write_consistency: dc_safe_quorum
   {{end}}
