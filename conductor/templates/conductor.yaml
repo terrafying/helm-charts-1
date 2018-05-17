@@ -14,9 +14,6 @@ data:
     workflow.elasticsearch.index.name=conductor
     # Load sample kitchen sink workflow
     loadSample=true
-    EC2_REGION=us-east-1
-    EC2_AVAILABILITY_ZONE=us-east-1{{ $group }} 
-    {{end}}
   log4j.properties: |
     log4j.rootLogger=INFO,stdout
     log4j.appender.stdout=org.apache.log4j.ConsoleAppender
