@@ -152,10 +152,8 @@ spec:
               fieldPath: metadata.namespace
         resources:
           limits:
-            cpu: {{ .Values.resourcesLimitsCpu }}
             memory: {{ .Values.resourcesLimitsMemory }}
           requests:
-            cpu: {{ .Values.resourcesRequestsCpu }}
             memory: {{ .Values.resourcesRequestsMemory }}
         ports:
         - containerPort: 9200
