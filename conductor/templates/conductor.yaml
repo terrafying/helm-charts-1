@@ -6,8 +6,8 @@ data:
   conductor-server.properties: |
     db=mysql
     jdbc.url=jdbc:mysql://galera.conductor:3306/conductor
-    jdbc.username=root
-    jdbc.password=myroot123
+    jdbc.username=conductor
+    jdbc.password=conductor123
     # Transport address to elasticsearch
     workflow.elasticsearch.url={{ $.Values.esUrl }}
     workflow.elasticsearch.cluster.name={{ $.Values.esClusterName }}
