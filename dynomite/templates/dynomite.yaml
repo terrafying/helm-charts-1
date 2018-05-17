@@ -154,10 +154,8 @@ spec:
         - redis-server --port 22122 
         resources:
           limits:
-            cpu: 1000m
             memory: 1Gi
           requests:
-            cpu: 500m
             memory: 512Mi
         ports:
         - name: redis
@@ -199,10 +197,6 @@ spec:
         - /bin/bash
         - -c
         - src/dynomite --conf-file=conf/${POD_NAME}.yml -v5
-        resources:
-          limits:
-            cpu: 1000m
-            memory: 1Gi
         ports:
         - name: peer
           containerPort: 8101
