@@ -14,7 +14,7 @@
 # limitations under the License.
 apiVersion: v1
 name: ignite
-version: 0.1.0
+version: 0.1.1
 appVersion: 2.4.0
 description: Apache Ignite™ is an open source memory-centric distributed database, caching, and processing platform used for transactional, analytical, and streaming workloads, delivering in-memory speed at petabyte scale.
 icon: https://ignite.apache.org/images/Ignite_tm_Logo_blk_RGB.svg

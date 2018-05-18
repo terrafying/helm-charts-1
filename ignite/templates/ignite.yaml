@@ -150,6 +150,8 @@ spec:
         # to use for an Ignite pod.
         - name: CONFIG_URI
           value: file:////data/ignite/example-kube.xml
+        - name: IGNITE_QUIET
+          value: "false"
         ports:
         # Ports to open.
         # Might be optional depending on your Kubernetes environment.
