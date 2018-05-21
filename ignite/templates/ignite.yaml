@@ -13,17 +13,27 @@ data:
             http://www.springframework.org/schema/beans/spring-beans.xsd
             http://www.springframework.org/schema/util
             http://www.springframework.org/schema/util/spring-util.xsd">
-    
         <bean class="org.apache.ignite.configuration.IgniteConfiguration">
             <property name="networkTimeout" value="150000" />
+            <property name="gridLogger">
+                <bean class="org.apache.ignite.logger.log4j.Log4JLogger">
+                    <constructor-arg type="java.lang.String" value="/data/ignite/log4j.xml"/>
+                </bean>
+            </property>
             <property name="discoverySpi">
                 <bean class="org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi">
-                <property name="ipFinder">
-                    <bean class="org.apache.ignite.spi.discovery.tcp.ipfinder.kubernetes.TcpDiscoveryKubernetesIpFinder">
-                        <property name="serviceName" value="ignite-svc"/>
-                        <property name="namespace" value="ignite"/>
-                    </bean>
-                </property>
+                    <property name="networkTimeout" value="150000" />
+                    <property name="ipFinder">
+                        <bean class="org.apache.ignite.spi.discovery.tcp.ipfinder.kubernetes.TcpDiscoveryKubernetesIpFinder">
+                            <property name="serviceName" value="ignite-svc"/>
+                            <property name="namespace" value="ignite"/>
+                        </bean>
+                    </property>
+                </bean>
+            </property>
+            <property name="communicationSpi">
+                <bean class="org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi">
+                    <property name="messageQueueLimit" value="1500" />
                 </bean>
             </property>
             <property name="dataStorageConfiguration">
@@ -50,6 +60,23 @@ data:
             </property>
         </bean>
     </beans>
+  log4j.xml: |
+    <?xml version="1.0" encoding="UTF-8" ?>
+    <!DOCTYPE log4j:configuration SYSTEM "log4j.dtd">
+    <log4j:configuration debug="true"
+        xmlns:log4j='http://jakarta.apache.org/log4j/'>
+        <appender name="console" class="org.apache.log4j.ConsoleAppender">
+            <layout class="org.apache.log4j.PatternLayout">
+                <param name="ConversionPattern" 
+            value="%d{yyyy-MM-dd HH:mm:ss} %-5p %c{1}:%L - %m%n" />
+            </layout>
+        </appender>
+    
+        <root>
+            <level value="DEBUG" />
+            <appender-ref ref="console" />
+        </root>
+    </log4j:configuration>
 ---
 apiVersion: v1
 kind: ServiceAccount
@@ -166,6 +193,9 @@ spec:
         - name: ignite-config
           mountPath: /data/ignite/example-kube.xml
           subPath: example-kube.xml
+        - name: ignite-log
+          mountPath: /data/ignite/log4j.xml
+          subPath: log4j.xml
       volumes:
         - name: ignite-config
           configMap:
