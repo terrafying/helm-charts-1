@@ -15,6 +15,7 @@ data:
             http://www.springframework.org/schema/util/spring-util.xsd">
     
         <bean class="org.apache.ignite.configuration.IgniteConfiguration">
+            <property name="networkTimeout" value="150000" />
             <property name="discoverySpi">
                 <bean class="org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi">
                 <property name="ipFinder">
