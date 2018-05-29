@@ -9,7 +9,7 @@ data:
     play.i18n.langs=["en"]
     
     play.http.requestHandler = "play.http.DefaultHttpRequestHandler"
-    play.http.context = "/kafka/mamager/"
+    play.http.context = "/kafka/manager/"
     play.application.loader=loader.KafkaManagerLoader
     
     kafka-manager.zkhosts="{{ .Values.zookeeper_connect }}"
