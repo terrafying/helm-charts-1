@@ -64,6 +64,11 @@ spec:
       containers:
       - name: conductor-server
         image: ihardz/conductor-server:latest
+        env:
+        - name: CONDUCTOR_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
         command:
         - /bin/sh
         - -c
