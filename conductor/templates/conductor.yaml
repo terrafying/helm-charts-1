@@ -4,16 +4,16 @@ metadata:
   name: conductor-cm
 data:
   conductor-server.properties: |
-    db=mysql
-    jdbc.url=jdbc:mysql://galera.conductor:3306/conductor
-    jdbc.username=conductor
-    jdbc.password=conductor123
+    db={{ $.Values.db }}
+    jdbc.url={{ $.Values.jdbcUrl }}
+    jdbc.username={{ $.Values.jdbcUserName }}
+    jdbc.password={{ $.Values.jdbcPassword }}
     # Transport address to elasticsearch
     workflow.elasticsearch.url={{ $.Values.esUrl }}
     workflow.elasticsearch.cluster.name={{ $.Values.esClusterName }}
     workflow.elasticsearch.index.name=conductor
     # Load sample kitchen sink workflow
-    loadSample=true
+    loadSample=false
   log4j.properties: |
     log4j.rootLogger=INFO,stdout
     log4j.appender.stdout=org.apache.log4j.ConsoleAppender
@@ -30,6 +30,7 @@ metadata:
     addonmanager.kubernetes.io/mode: Reconcile
     kubernetes.io/name: "conductor"
 spec:
+  clusterIP: None 
   ports:
   - name: ui
     port: 5000
@@ -43,13 +44,15 @@ spec:
     app: conductor
 ---
 apiVersion: apps/v1
-kind: Deployment
+kind: StatefulSet
 metadata:
   name: conductor
   labels:
     app: conductor
 spec:
+  serviceName: conductor-svc
   replicas: {{ .Values.replicas }}
+  podManagementPolicy: Parallel
   selector:
     matchLabels:
       app: conductor

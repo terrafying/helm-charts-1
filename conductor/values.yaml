@@ -15,14 +15,12 @@
 
 # Default values for template variables.
 
-dynomiteHostsA: dynomite-0.dynomite-svc.dynomite.svc.cluster.local:8102:us-east-1a
+db: ignite
 
-dynomiteHostsB: dynomite-1.dynomite-svc.dynomite.svc.cluster.local:8102:us-east-1b
-
-dynomiteHostsC: dynomite-2.dynomite-svc.dynomite.svc.cluster.local:8102:us-east-1c
+jdbcUrl: jdbc:ignite:thin://ignite-ext-svc.ignite:10800
 
 esUrl: es-svc.elastic5:9300
 
 esClusterName: conductor
 
-replicas: 2
+replicas: 3
