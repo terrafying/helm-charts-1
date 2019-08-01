@@ -1,0 +1,88 @@
+apiVersion: apps/v1beta1
+kind: Deployment
+metadata:
+  labels:
+    app: {{ .Values.elastic.master.app }}
+  name: {{ .Values.elastic.master.name }}
+  namespace: {{ .Values.namespace }}
+spec:
+  replicas: {{ .Values.elastic.master.replicas }}
+  revisionHistoryLimit: {{ .Values.elastic.master.revisionHistoryLimit }}
+  selector:
+    matchLabels:
+      app: {{ .Values.elastic.master.app }}
+  template:
+    metadata:
+      labels:
+        app: {{ .Values.elastic.master.app }}
+    spec:
+      containers:
+      - name: es-master
+        image: {{ .Values.elastic.image.registry }}:{{ .Values.elastic.image.tag }}
+        imagePullPolicy: {{ .Values.elastic.image.imagePullPolicy }}
+        securityContext:
+          privileged: {{ .Values.elastic.securityContext.privileged }}
+          runAsUser: {{ .Values.elastic.securityContext.runAsUser }}
+        env:
+        - name: POD_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        - name: ES_MASTER
+          value: "true"
+        - name: ES_DATA
+          value: "false"
+        - name: ES_INGEST
+          value: "false"
+        command:
+        - /bin/bash
+        - -c
+        - --
+        args : 
+        - |
+          ulimit -l unlimited && \
+          /sbin/sysctl -w vm.max_map_count=262144 && \
+          chown -R elasticsearch:elasticsearch /data && \
+          /usr/local/bin/docker-entrypoint.sh
+        ports:
+        - containerPort: {{ .Values.elastic.ports.clientport }}
+          name: client
+          protocol: TCP
+        - containerPort: {{ .Values.elastic.ports.transportport }}
+          name: transport
+          protocol: TCP
+#        livenessProbe:
+#          failureThreshold: {{ .Values.elastic.livenessProbe.failureThreshold }}
+#          initialDelaySeconds: {{ .Values.elastic.livenessProbe.initialDelaySeconds }}
+#          periodSeconds: {{ .Values.elastic.livenessProbe.periodSeconds }}
+#          successThreshold: {{ .Values.elastic.livenessProbe.successThreshold }}
+#          tcpSocket:
+#            port: transport
+#          timeoutSeconds: {{ .Values.elastic.livenessProbe.timeoutSeconds }}
+        volumeMounts:
+        - name: datadir
+          mountPath: /data
+          subPath: elasticsearch
+        - name: datadir
+          mountPath: /usr/share/elasticsearch/plugins
+          subPath: plug
+        - mountPath: /usr/share/elasticsearch/config/elasticsearch.yml
+          name: es-config
+          subPath: elasticsearch.yml
+        - mountPath: /usr/share/elasticsearch/config/jvm.options
+          name: es-config-jvm
+          subPath: jvm.options
+      dnsPolicy: ClusterFirst
+      volumes:
+      - configMap:
+          defaultMode: {{ .Values.elastic.volumes.configMap.defaultMode }}
+          name: es-cm
+        name: es-config
+      - configMap:
+          defaultMode: {{ .Values.elastic.volumes.configMap.defaultMode }}
+          name: es-cm-jvm-master
+        name: es-config-jvm
+      - hostPath:
+          path: /data/k8s/elastic
+          type: {{ .Values.elastic.volumes.hostPath.type }}
+        name: datadir

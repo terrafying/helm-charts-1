@@ -1,0 +1,18 @@
+    bootstrap.memory_lock: true
+    cluster.name: esa-dev
+    network.host: 0.0.0.0
+    node.name: ${HOSTNAME}.es-svc.${POD_NAMESPACE}.svc.cluster.local
+    node.master: ${ES_MASTER}
+    node.data: ${ES_DATA}
+    node.ingest: ${ES_INGEST}
+    path.data: /data/${HOSTNAME}
+    http.cors.allow-headers: Authorization,X-Requested-With,Content-Length,Content-Type
+    http.cors.allow-origin: \"*\"
+    http.cors.enabled: true
+    http.port: 9200
+    transport.tcp.port: 9300
+    script.painless.regex.enabled: true
+    discovery.zen.minimum_master_nodes: 1
+    discovery.zen.ping.unicast.hosts:
+    - es-data-svc.${POD_NAMESPACE}.svc.cluster.local
+    - es-master-svc.${POD_NAMESPACE}.svc.cluster.local

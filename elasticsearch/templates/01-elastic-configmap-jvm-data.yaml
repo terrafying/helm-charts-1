@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: es-cm-jvm-data
+  namespace: {{ .Values.namespace }}
+data:
+  jvm.options: |
+{{ .Files.Get "jvm.options.data" }}
