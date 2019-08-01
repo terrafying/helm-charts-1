@@ -1,0 +1,17 @@
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: spark-cluster-cm
+  namespace: {{ .Values.namespace }}
+  labels:
+    app: spark
+    component: {{ .Values.component }}
+data:
+  spark-defaults.conf: |
+{{ .Files.Get "spark-defaults.conf" }}
+  core-site.xml: |
+    {{ .Files.Get "core-site.xml" }}
+  hive-server.xml: |
+{{ .Files.Get "hive-server.xml" }}
+  hive-site.xml: |
+{{ .Files.Get "hive-site.xml" }}

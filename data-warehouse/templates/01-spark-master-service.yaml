@@ -1,0 +1,23 @@
+# This is logical service endpoint that spark workers can use to access
+# spark master pods.
+
+kind: Service
+apiVersion: v1
+metadata:
+  name: spark-master
+  namespace: {{ .Values.namespace }}
+  labels:
+    app: {{ .Values.spark.master.app }}
+    component: {{ .Values.component }}
+spec:
+  ports:
+    - port: {{ .Values.spark.master.service.spark.port }}
+      targetPort: {{ .Values.spark.master.service.spark.targetPort }}
+      name: {{ .Values.spark.master.service.spark.name }}
+    - port: {{ .Values.spark.master.service.http.port }}
+      targetPort: {{ .Values.spark.master.service.http.targetPort }}
+      name: {{ .Values.spark.master.service.http.name }}
+  selector:
+    app: {{ .Values.spark.master.app }}
+  externalIPs: 
+  - {{ .Values.externalIPs }}

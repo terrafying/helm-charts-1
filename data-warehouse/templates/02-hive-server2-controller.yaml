@@ -1,0 +1,121 @@
+kind: Service
+apiVersion: v1
+metadata:
+  name: hive-server2-svc
+  namespace: {{ .Values.namespace }}
+  labels:
+    app: {{ .Values.hive_server2.app }}
+    component: {{ .Values.component }}
+spec:
+  ports:
+    - port: {{ .Values.hive_server2.service.jdbc.port }}
+      targetPort: {{ .Values.hive_server2.service.jdbc.port }}
+      name: {{ .Values.hive_server2.service.jdbc.name }}
+    - port: {{ .Values.hive_server2.service.ui.port }}
+      targetPort: {{ .Values.hive_server2.service.ui.port }}
+      name: {{ .Values.hive_server2.service.ui.name }}
+  selector:
+    app: {{ .Values.component }}
+---
+kind: ReplicationController
+apiVersion: v1
+metadata:
+  name: hive-server2-controller
+  namespace: {{ .Values.namespace }}
+  labels:
+    app: {{ .Values.hive_server2.app }}
+    component: {{ .Values.component }}
+spec:
+  replicas: {{ .Values.hive_server2.replicas }}
+  selector:
+    app: {{ .Values.hive_server2.app }}
+  template:
+    metadata:
+      labels:
+        app: {{ .Values.hive_server2.app }}
+        component: {{ .Values.component }}
+    spec:
+      containers:
+      - name: hive-server2
+        image: {{ .Values.image.registry }}:{{ .Values.image.tag }}
+        imagePullPolicy: {{ .Values.image.pullPolicy }}
+        env:
+        - name: HIVE_AUX_JARS_PATH
+          value: /jars/additional/*,/opt/spark/shared/auth.jar
+        - name: HADOOP_HEAPSIZE
+          value: "1024"
+        - name: HADOOP_CLIENT_OPTS 
+          value: "-Dcom.sun.jndi.ldap.object.disableEndpointIdentification=true -Dlog4j2.configuration=/opt/hive/conf/hive-log4j2.properties"
+        - name: SPARK_LOCAL_HOSTNAME
+          valueFrom:
+            fieldRef:
+              fieldPath: status.podIP
+        command: 
+        - "/bin/bash"
+        - "-c"
+        - "--"
+        args:
+        - |
+          mkdir /opt/spark/logs && \
+          chmod 777 /opt/hive/scratchdir && \
+          hive --service hiveserver2
+        resources:
+          limits:
+            memory: "{{ .Values.hive_server2.controller.resources.limits.memory }}"
+            cpu: "{{ .Values.hive_server2.controller.resources.limits.cpu }}"
+          requests:
+            memory: "{{ .Values.hive_server2.controller.resources.requests.memory }}"
+            cpu: "{{ .Values.hive_server2.controller.resources.requests.cpu }}"
+        ports:
+          - containerPort: 4040
+        volumeMounts:
+        - name: spark-vol
+          mountPath: /opt/spark/shared
+          subPath: spark/shared
+        - name: spark-vol
+          mountPath: /opt/spark/history
+          subPath: spark/history
+        - name: spark-vol
+          mountPath: /opt/hive/warehouse
+          subPath: hive/warehouse
+        - name: spark-vol
+          mountPath: /opt/hive/scratchdir
+          subPath: hive/scratchdir
+        - name: spark-cluster-config
+          mountPath: /opt/hive/conf/hive-site.xml
+          subPath: hive-server.xml
+        - name: spark-cluster-config
+          mountPath: /opt/hive/conf/spark-defaults.conf
+          subPath: spark-defaults.conf
+        - name: spark-cluster-config
+          mountPath: /opt/hive/conf/core-site.xml
+          subPath: core-site.xml
+        - name: hive-config
+          mountPath: /opt/hive/conf/hive-log4j2.properties
+          subPath: hive-log4j2.properties
+        - name: spark-cluster-config
+          mountPath: /opt/spark/conf/hive-site.xml
+          subPath: hive-site.xml
+        - name: spark-cluster-config
+          mountPath: /opt/spark/conf/spark-defaults.conf
+          subPath: spark-defaults.conf
+        - name: spark-cluster-config
+          mountPath: /opt/spark/conf/core-site.xml
+          subPath: core-site.xml
+        - name: hive-config
+          mountPath: /opt/spark/conf/log4j.properties
+          subPath: log4j.properties
+      volumes:
+      - name: spark-vol
+        persistentVolumeClaim:
+          claimName: pvc
+      - name: spark-cluster-config
+        configMap:
+            name: spark-cluster-cm
+      - name: hive-config
+        configMap:
+            name: hive-logging-cm
+      {{- if .Values.pullSecret_enabled -}}
+      imagePullSecrets:
+        - name: {{ .Values.hive_server2.controller.image.imagePullSecrets }}
+      {{- end -}}

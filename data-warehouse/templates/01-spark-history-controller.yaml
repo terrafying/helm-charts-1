@@ -1,0 +1,62 @@
+kind: ReplicationController
+apiVersion: v1
+metadata:
+  name: spark-history-controller
+  namespace: {{ .Values.namespace }}
+spec:
+  replicas: {{ .Values.spark.history.replicas }}
+  selector:
+    app: {{ .Values.spark.history.app }}
+  template:
+    metadata:
+      labels:
+        app: {{ .Values.spark.history.app }}
+        component: {{ .Values.component }}
+    spec:
+      containers:
+        - name: spark-history
+          image: {{ .Values.spark.image.registry}}:{{ .Values.spark.image.tag }}
+          imagePullPolicy: {{ .Values.spark.image.pullPolicy }}
+          command:
+            - "/opt/spark/bin/spark-class"
+            - "org.apache.spark.deploy.history.HistoryServer"
+          ports:
+            - containerPort: 18088
+            - containerPort: 18488
+          resources:
+            limits:
+              memory: "{{ .Values.spark.history.resources.limits.memory }}"
+              cpu: "{{ .Values.spark.history.resources.limits.cpu }}"
+            requests:
+              memory: "{{ .Values.spark.history.resources.requests.memory }}"
+              cpu: "{{ .Values.spark.history.resources.requests.cpu }}"
+          livenessProbe:
+            exec:
+              command:
+              - "chmod"
+              - "-R"
+              - "777"
+              - "/opt/spark/history"
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          volumeMounts:
+          - name: spark-vol
+            mountPath: /opt/spark/history
+            subPath: spark/history
+          - name: spark-vol
+            mountPath: /opt/spark/work
+            subPath: spark/work
+          - name: spark-cluster-config
+            mountPath: /opt/spark/conf/spark-defaults.conf
+            subPath: spark-defaults.conf
+      volumes:
+        - name: spark-vol
+          persistentVolumeClaim:
+            claimName: pvc
+        - name: spark-cluster-config
+          configMap:
+              name: spark-cluster-cm
+      {{- if .Values.pullSecret_enabled -}}
+      imagePullSecrets:
+        - name: {{ .Values.spark.image.imagePullSecrets }}
+      {{- end -}}

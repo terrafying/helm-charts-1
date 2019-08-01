@@ -1,0 +1,69 @@
+# This yaml file perform two function 
+# 1. It creates a kubernetes secrets which pass the credentials of the users to pods as
+#    enviroment varaibles.The secrets need to be encode in base64.
+# 2. It creates spark master replication controller. Port no. 7077 is exposed to 
+#    communicate with spark master and port no. 8080 is exposed for the web UI.
+#    Also it claims volume dedicated for the user namespace and mount on the path
+#    /spark/data inside the containers. This path is shared among all the containers.
+kind: ReplicationController
+apiVersion: v1
+metadata:
+  name: spark-master-controller
+  namespace: {{ .Values.namespace }}
+spec:
+  replicas: {{ .Values.spark.master.replicas }}
+  selector:
+    app: {{ .Values.spark.master.app }}
+  template:
+    metadata:
+      labels:
+        app: {{ .Values.spark.master.app }}
+        component: {{ .Values.component }}
+    spec:
+      containers:
+        - name: spark-master
+          image: {{ .Values.spark.image.registry}}:{{ .Values.spark.image.tag }}
+          imagePullPolicy: {{ .Values.spark.image.pullPolicy }}
+          env:
+          - name: SPARK_DAEMON_MEMORY
+            value: "{{ .Values.spark.master.daemon_memory }}"
+          command: ["/start-master"]
+          ports:
+            - containerPort: 7077
+            - containerPort: 8080
+          resources:
+            limits:
+              memory: "{{ .Values.spark.master.resources.limits.memory }}"
+              cpu: "{{ .Values.spark.master.resources.limits.cpu }}"
+            requests:
+              memory: "{{ .Values.spark.master.resources.requests.memory }}"
+              cpu: "{{ .Values.spark.master.resources.requests.cpu }}"
+          volumeMounts:
+          - name: {{ .Values.spark.volume.name }}
+            mountPath: /opt/spark/work
+            subPath: spark/work
+          - name: {{ .Values.spark.volume.name }}
+            mountPath: /opt/spark/shared
+            subPath: spark/shared
+          - name: {{ .Values.spark.volume.name }}
+            mountPath: /opt/spark/checkpoints
+            subPath: spark/checkpoints
+          - name: {{ .Values.spark.volume.name }}
+            mountPath: /opt/hive/warehouse
+            subPath: hive/warehouse
+          - name: {{ .Values.spark.volume.name }}
+            mountPath: /opt/hive/scratchdir
+            subPath: hive/scratchdir
+          - name: spark-cluster-config
+            mountPath: /opt/spark/conf
+      volumes:
+        - name: {{ .Values.spark.volume.name }}
+          persistentVolumeClaim:
+            claimName: {{ .Values.pvc.name }}
+        - name: spark-cluster-config
+          configMap:
+              name: spark-cluster-cm
+      {{- if .Values.pullSecret_enabled -}}
+      imagePullSecrets:
+        - name: {{ .Values.spark.image.imagePullSecrets }}
+      {{- end -}}

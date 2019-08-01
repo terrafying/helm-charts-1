@@ -1,0 +1,23 @@
+# This is logical service endpoint that spark workers can use to access
+# spark master pods.
+
+kind: Service
+apiVersion: v1
+metadata:
+  name: spark-history
+  namespace: {{ .Values.namespace }}
+  labels:
+    app: {{ .Values.spark.master.app }}
+    component: {{ .Values.component }}
+spec:
+  ports:
+    - port: {{ .Values.spark.history.service.http.port }}
+      targetPort: {{ .Values.spark.history.service.http.targetPort }}
+      name: {{ .Values.spark.history.service.http.name }}
+    - port: {{ .Values.spark.history.service.https.port }}
+      targetPort: {{ .Values.spark.history.service.https.targetPort }}
+      name: {{ .Values.spark.history.service.https.name }}
+  selector:
+    app: {{ .Values.spark.history.app }}
+  externalIPs: 
+  - {{ .Values.externalIPs }}

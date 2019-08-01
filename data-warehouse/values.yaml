@@ -1,0 +1,195 @@
+namespace: spark
+component: spark-cluster
+externalIPs: 172.20.237.244
+pullSecret_enabled: false
+pvc:
+  name: pvc
+  storage: 10Gi
+  accessModes: ReadWriteMany
+  storage_class: gomel-nfs
+  billingType: hourly
+  status_enabled: true
+  capacity_storage: 11G
+  phase: Bound
+  
+spark:
+  volume:
+    name: spark-vol
+  image:
+    registry: gmlclusterm01.gomel.iba.by/cedp-garage/spark-for-cluster
+    tag: 2.4.0
+    pullPolicy: Always
+    imagePullSecret: bluemix-default-secret     
+  master:
+    app: spark-master
+    replicas: 1
+    daemon_memory: 1G
+    resources:
+      limits:
+        memory: 1Gi
+        cpu: 1
+      requests:
+        memory: 100Mi
+        cpu: 0.1
+    service:
+      spark:
+        name: spark
+        port: 7077
+        targetPort: 7077
+      http:
+        name: http
+        port: 8888
+        targetPort: 8080
+  worker:
+    app: spark-worker
+    replicas: 3
+    containerPort: 8081
+    env:
+      cores: 3
+      memory: 3G
+      daemon_memory: 512m
+    resources:
+      limits:
+        memory: 4Gi
+        cpu: 3
+      requests:
+        memory: 100Mi
+        cpu: 0.1
+  history:
+    app: spark-history
+    replicas: 1
+    resources:
+      limits:
+        memory: 2Gi
+        cpu: 0.5
+      requests:
+        memory: 100Mi
+        cpu: 0.1
+    service:
+      http:
+        name: http
+        port: 18088
+        targetPort: 18088
+      https:
+        name: https
+        port: 18488
+        targetPort: 18488
+  
+
+image:
+  registry: gmlclusterm01.gomel.iba.by/cedp-garage/hive-on-spark-2.4.0
+  tag: 3.1.1
+  pullPolicy: Always
+  imagePullSecret: bluemix-default-secret 
+  
+metastore:
+  app: hive-metastore
+  replicas: 1
+  controller:
+    init:
+      resources:
+        limits:
+          cpu: 1
+          memory: 1Gi
+        requests:
+          cpu: 0.1
+          memory: 100Mi
+    container:
+      resources:
+        limits:
+          cpu: 0.5
+          memory: 1Gi
+        requests:
+          cpu: 0.1
+          memory: 100Mi
+       
+  service:
+      name: thrift
+      port: 9083
+      targetPort: 9083
+      
+hive_server2:
+  app: hive-server2
+  replicas: 1
+  controller:
+    resources:
+      limits:
+        cpu: 1
+        memory: 1Gi
+      requests:
+        cpu: 0.1
+        memory: 100Mi
+  service:
+    jdbc:
+      name: jdbc
+      port: 10000
+      targetPort: 10000
+    ui:
+      name: ui
+      port: 10002
+      targetPort: 10002
+  ext_service:
+    name: jdbc
+    port: 10000
+    targetPort: 10000
+    
+zeppelin:
+  app: zeppelin
+  replicas: 1
+  controller:
+    image:
+      registry: gmlclusterm01.gomel.iba.by/cedp-garage/zeppelin-on-spark-2.4.0
+      tag: 0.8.1
+      pullPolicy: Always
+      imagePullSecret: bluemix-default-secret
+    resources:
+      init:
+        limits:
+          cpu: 1
+          memory: 1Gi
+        requests:
+          cpu: 0.1
+          memory: 100Mi
+      container:
+        limits:
+          cpu: 2 
+          memory: 4Gi
+        requests:
+          cpu: 0.1
+          memory: 100Mi
+      
+  service:
+    name: ui
+    port: 8082
+    targetPort: 8080
+  
+
+ingress:
+  enabled: false
+  class: nginx
+  proxy_body_size: 500m
+  proxy_send_timeout: 600s
+  redirect_to_https: True
+  hive:
+    hosts: hive-server2.epm-sales-development.us-south.containers.appdomain.cloud
+    service: hive-server2-svc
+    port: 10002
+    path: /
+  master: 
+    hosts: spark-master.epm-sales-development.us-south.containers.appdomain.cloud
+    service: spark-master
+    port: 8080
+    path: /
+  history: 
+    hosts: spark-history.epm-sales-development.us-south.containers.appdomain.cloud
+    service: spark-history
+    port: 18088
+    path: /
+  zeppelin: 
+    hosts: zeppelin.epm-sales-development.us-south.containers.appdomain.cloud
+    service: zeppelin-svc
+    port: 8080
+    path: /
+  secretName: epm-sales-development
+  appid_auth: bindSecret=binding-epm-sales-app-id namespace=default requestType=web serviceName=spark-master,spark-history,zeppelin-svc,hive-server2-svc
+

@@ -1,0 +1,122 @@
+kind: Service
+apiVersion: v1
+metadata:
+  name: hive-metastore-svc
+  namespace: {{ .Values.namespace }}
+  labels:
+    app: {{ .Values.metastore.app }}
+    component: {{ .Values.component }}
+spec:
+  ports:
+    - port: {{ .Values.metastore.service.port }}
+      targetPort: {{ .Values.metastore.service.targetPort }}
+      name: {{ .Values.metastore.service.name }}
+  selector:
+    app: {{ .Values.metastore.app }}
+---
+kind: ReplicationController
+apiVersion: v1
+metadata:
+  name: hive-metastore-controller
+  namespace: {{ .Values.namespace }}
+spec:
+  replicas: {{ .Values.metastore.replicas }}
+  selector:
+    app: {{ .Values.metastore.app }}
+  template:
+    metadata:
+      labels:
+        app: {{ .Values.metastore.app }}
+        component: {{ .Values.component }}
+    spec:
+      initContainers:
+      - name: init-metastore
+        image: {{ .Values.image.registry }}:{{ .Values.image.tag }}
+        imagePullPolicy: {{ .Values.image.pullPolicy }}
+        command:
+        - "/bin/bash"
+        - "-c"
+        - "--"
+        args:
+        - |
+          if [ ! -d "/opt/derby/metastore_db" ]; then
+            echo "Setting up metastore"
+            cd /opt/derby
+            $HIVE_HOME/bin/schematool -dbType derby -initSchema 
+            cd
+          else 
+            echo "Metastore already exist"
+          fi
+        resources:
+          limits:
+            memory: "{{ .Values.metastore.controller.init.resources.limits.memory }}"
+            cpu: "{{ .Values.metastore.controller.init.resources.limits.cpu }}"
+          requests:
+            memory: "{{ .Values.metastore.controller.init.resources.requests.memory }}"
+            cpu: "{{ .Values.metastore.controller.init.resources.requests.cpu }}"
+        volumeMounts:
+        - name: spark-vol
+          mountPath: /opt/derby
+          subPath: hive/derby
+        - name: spark-cluster-config
+          mountPath: /opt/hive/conf/hive-site.xml
+          subPath: hive-site.xml
+        - name: hive-config
+          mountPath: /opt/hive/conf/hive-log4j2.properties
+          subPath: hive-log4j2.properties
+      containers:
+        - name: hive-metastore
+          image: {{ .Values.image.registry }}:{{ .Values.image.tag }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          env:
+          - name: HIVE_AUX_JARS_PATH
+            value: /jars/additional
+          command: 
+          - "/bin/bash"
+          - "-c"
+          - "--"
+          args:
+          - |
+            hive --service metastore
+          ports:
+          - containerPort: 9083
+          resources:
+            limits:
+              memory: "{{ .Values.metastore.controller.container.resources.limits.memory }}"
+              cpu: "{{ .Values.metastore.controller.container.resources.limits.cpu }}"
+            requests:
+              memory: "{{ .Values.metastore.controller.container.resources.requests.memory }}"
+              cpu: "{{ .Values.metastore.controller.container.resources.requests.cpu }}"
+          volumeMounts:
+          - name: spark-vol
+            mountPath: /opt/derby
+            subPath: hive/derby
+          - name: spark-vol
+            mountPath: /opt/spark/shared
+            subPath: spark/shared
+          - name: spark-cluster-config
+            mountPath: /opt/hive/conf/hive-site.xml
+            subPath: hive-server.xml
+          - name: spark-cluster-config
+            mountPath: /opt/hive/conf/spark-defaults.conf
+            subPath: spark-defaults.conf
+          - name: spark-cluster-config
+            mountPath: /opt/hive/conf/core-site.xml
+            subPath: core-site.xml
+          - name: hive-config
+            mountPath: /opt/hive/conf/hive-log4j2.properties
+            subPath: hive-log4j2.properties
+      volumes:
+      - name: spark-vol
+        persistentVolumeClaim:
+          claimName: pvc
+      - name: spark-cluster-config
+        configMap:
+            name: spark-cluster-cm
+      - name: hive-config
+        configMap:
+            name: hive-logging-cm
+      {{- if .Values.pullSecret_enabled -}}
+      imagePullSecrets:
+        - name: {{ .Values.image.imagePullSecrets }}
+      {{- end -}}

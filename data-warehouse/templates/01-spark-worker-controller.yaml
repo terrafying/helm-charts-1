@@ -1,0 +1,78 @@
+# This replication controller will create and manage the spark worker pods.
+# Also this worker are using the claim volume at mount path /spark/data.
+
+kind: ReplicationController
+apiVersion: v1
+metadata:
+  name: spark-worker-controller
+  namespace: {{ .Values.namespace }}
+spec:
+  replicas: {{ .Values.spark.worker.replicas }}
+  selector:
+    app: {{ .Values.spark.worker.app }}
+  template:
+    metadata:
+      labels:
+        app: {{ .Values.spark.worker.app }}
+        component: {{ .Values.component }}
+    spec:
+      containers:
+        - name: spark-worker
+          image: {{ .Values.spark.image.registry}}:{{ .Values.spark.image.tag }}
+          imagePullPolicy: {{ .Values.spark.image.pullPolicy }}
+          env:
+          - name: SPARK_WORKER_CORES
+            value: "{{ .Values.spark.worker.env.cores }}"
+          - name: SPARK_WORKER_MEMORY
+            value: "{{ .Values.spark.worker.env.memory }}"
+          - name: SPARK_DAEMON_MEMORY
+            value: "{{ .Values.spark.worker.env.daemon_memory }}"
+          command: ["/start-worker"]
+          ports:
+            - containerPort: {{ .Values.spark.worker.containerPort }}
+          resources:
+            limits:
+              memory: "{{ .Values.spark.worker.resources.limits.memory }}"
+              cpu: "{{ .Values.spark.worker.resources.limits.cpu }}"
+            requests:
+              memory: "{{ .Values.spark.worker.resources.requests.memory }}"
+              cpu: "{{ .Values.spark.worker.resources.requests.cpu }}"
+          volumeMounts:
+          - name: spark-vol
+            mountPath: /opt/spark/work
+            subPath: spark/work
+          - name: spark-vol
+            mountPath: /opt/spark/shared
+            subPath: spark/shared
+          - name: spark-vol
+            mountPath: /opt/spark/checkpoints
+            subPath: spark/checkpoints
+          - name: spark-vol
+            mountPath: /opt/hive/warehouse
+            subPath: hive/warehouse
+          - name: spark-vol
+            mountPath: /opt/hive/scratchdir
+            subPath: hive/scratchdir
+          - name: spark-cluster-config
+            mountPath: /opt/spark/conf
+      volumes:
+        - name: spark-vol
+          persistentVolumeClaim:
+            claimName: pvc
+        - name: spark-cluster-config
+          configMap:
+              name: spark-cluster-cm
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchExpressions:
+              - key: app
+                operator: In
+                values:
+                - {{ .Values.spark.worker.app }}
+            topologyKey: kubernetes.io/hostname
+      {{- if .Values.pullSecret_enabled -}}
+      imagePullSecrets:
+        - name: {{ .Values.spark.image.imagePullSecrets }}
+      {{- end -}}

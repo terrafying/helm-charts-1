@@ -1,0 +1,138 @@
+kind: Service
+apiVersion: v1
+metadata:
+  name: zeppelin-svc
+  namespace: {{ .Values.namespace }}
+  labels:
+    app: {{ .Values.zeppelin.app }}
+    component: {{ .Values.component }}
+spec:
+  ports:
+    - port: {{ .Values.zeppelin.service.port }}
+      targetPort: {{ .Values.zeppelin.service.targetPort }}
+      name: {{ .Values.zeppelin.service.name }}
+  selector:
+    app: {{ .Values.zeppelin.app }}
+  externalIPs:
+  - {{ .Values.externalIPs }}
+---
+kind: ReplicationController
+apiVersion: v1
+metadata:
+  name: zeppelin-controller
+  namespace: {{ .Values.namespace }}
+spec:
+  replicas: {{ .Values.zeppelin.replicas }}
+  selector:
+    app: {{ .Values.zeppelin.app }}
+  template:
+    metadata:
+      labels:
+        app: {{ .Values.zeppelin.app }}
+        component: {{ .Values.component }}
+    spec:
+      initContainers:
+      - name: init-conf
+        image: {{ .Values.zeppelin.controller.image.registry }}:{{ .Values.zeppelin.controller.image.tag }}
+        imagePullPolicy: {{ .Values.zeppelin.controller.image.pullPolicy }}
+        command:
+        - "/bin/bash"
+        - "-c"
+        - "--"
+        args:
+        - |
+          yes | cp -rf /opt/zeppelin-conf/log4j.properties /opt/zeppelin/conf/ && \
+          yes | cp -rf /opt/zeppelin-conf/zeppelin-site.xml /opt/zeppelin/conf/ && \
+          yes | cp -rf /opt/zeppelin-conf/zeppelin-env.sh /opt/zeppelin/conf/ && \
+          ls -la /opt/zeppelin/conf/
+        resources:
+          limits:
+            memory: "{{ .Values.zeppelin.controller.resources.init.limits.memory }}"
+            cpu: "{{ .Values.zeppelin.controller.resources.init.limits.cpu }}"
+          requests:
+            memory: "{{ .Values.zeppelin.controller.resources.init.requests.memory }}"
+            cpu: "{{ .Values.zeppelin.controller.resources.init.requests.cpu }}"
+        volumeMounts:
+        - name: spark-vol
+          mountPath: /opt/zeppelin/conf
+          subPath: zeppelin/conf
+        - name: zeppelin-config
+          mountPath: /opt/zeppelin-conf/log4j.properties
+          subPath: log4j.properties
+        - name: zeppelin-config
+          mountPath: /opt/zeppelin-conf/zeppelin-site.xml
+          subPath: zeppelin-site.xml
+        - name: zeppelin-config
+          mountPath: /opt/zeppelin-conf/zeppelin-env.sh
+          subPath: zeppelin-env.sh
+      containers:
+      - name: zeppelin
+        image: {{ .Values.zeppelin.controller.image.registry }}:{{ .Values.zeppelin.controller.image.tag }}
+        imagePullPolicy: {{ .Values.zeppelin.controller.image.pullPolicy }}
+        env:
+        - name: SPARK_PRINT_LAUNCH_COMMAND
+          value: "true"
+        - name: SPARK_LOCAL_HOSTNAME
+          valueFrom:
+            fieldRef:
+              fieldPath: status.podIP
+        command: 
+        - "/bin/bash"
+        - "-c"
+        - "--"
+        args:
+        - |
+          zeppelin.sh
+        ports:
+          - containerPort: 8080
+        resources:
+          limits:
+            memory: "{{ .Values.zeppelin.controller.resources.container.limits.memory }}"
+            cpu: "{{ .Values.zeppelin.controller.resources.container.limits.cpu }}"
+          requests:
+            memory: "{{ .Values.zeppelin.controller.resources.container.requests.memory }}"
+            cpu: "{{ .Values.zeppelin.controller.resources.container.requests.cpu }}"
+        volumeMounts:
+        - name: {{ .Values.spark.volume.name }}
+          mountPath: /opt/zeppelin/conf
+          subPath: zeppelin/conf
+        - name: {{ .Values.spark.volume.name }}
+          mountPath: /opt/zeppelin/notebook
+          subPath: zeppelin/notebook
+        - name: {{ .Values.spark.volume.name }}
+          mountPath: /opt/spark/work
+          subPath: spark
+        - name: {{ .Values.spark.volume.name }}
+          mountPath: /opt/spark/shared
+          subPath: spark/shared
+        - name: {{ .Values.spark.volume.name }}
+          mountPath: /opt/spark/checkpoints
+          subPath: spark/checkpoints
+        - name: {{ .Values.spark.volume.name }}
+          mountPath: /opt/spark/history
+          subPath: spark/history
+        - name: spark-cluster-config
+          mountPath: /opt/spark/conf/hive-site.xml
+          subPath: hive-site.xml
+        - name: spark-cluster-config
+          mountPath: /opt/spark/conf/core-site.xml
+          subPath: core-site.xml
+        - name: spark-cluster-config
+          mountPath: /opt/spark/conf/spark-defaults.conf
+          subPath: spark-defaults.conf
+      volumes:
+      - name: {{ .Values.spark.volume.name }}
+        persistentVolumeClaim:
+          claimName: pvc
+      - name: spark-cluster-config
+        configMap:
+            name: spark-cluster-cm
+      - name: zeppelin-config
+        configMap:
+            name: zeppelin-cm
+            defaultMode: 0755
+      {{- if .Values.pullSecret_enabled -}}
+      imagePullSecrets:
+        - name: {{ .Values.zeppelin.controller.image.imagePullSecrets }}
+      {{- end -}}
+        

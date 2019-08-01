@@ -1,0 +1,18 @@
+kind: Service
+apiVersion: v1
+metadata:
+  name: hive-server2-svc-ext
+  namespace: {{ .Values.namespace }}
+  labels:
+    app: {{ .Values.hive_server2.app }}
+    component: {{ .Values.component }}
+spec:
+  ports:
+    - port: {{ .Values.hive_server2.ext_service.port  }}
+      targetPort: {{ .Values.hive_server2.ext_service.targetPort  }}
+      name: {{ .Values.hive_server2.ext_service.name  }}
+  selector:
+    app: {{ .Values.hive_server2.app }}
+  externalIPs:
+  - {{ .Values.externalIPs  }}
+

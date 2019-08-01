@@ -1,0 +1,58 @@
+{{- if .Values.ingress.enabled -}}
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: spark-master-ui-extension
+  namespace: {{ .Values.namespace }}
+  annotations:
+    kubernetes.io/ingress.class: "{{ .Values.ingress.class }}"
+    ingress.kubernetes.io/proxy-body-size: "{{ .Values.ingress.proxy_body_size }}"
+    ingress.kubernetes.io/proxy-send-timeout: "{{ .Values.ingress.proxy_send_timeout }}"
+    ingress.bluemix.net/redirect-to-https: "{{ .Values.ingress.redirect_to_https }}"
+    ingress.bluemix.net/appid-auth: "{{ .Values.ingress.appid_auth }}"
+    ingress.bluemix.net/location-snippets: |
+      <EOS>
+      serviceName={{ .Values.ingress.master.service }}
+      proxy_set_header Cookie "";
+      <EOS>
+  labels:
+    app: {{ .Values.spark.master.app }}
+    component: {{ .Values.component }}
+spec:
+  tls:
+   - hosts:
+     - {{ .Values.ingress.hive.hosts }}
+     - {{ .Values.ingress.master.hosts }}
+     - {{ .Values.ingress.history.hosts }}
+     - {{ .Values.ingress.zeppelin.hosts }}
+     secretName: {{ .Values.ingress.secretName }}
+  rules:
+  - host: {{ .Values.ingress.hive.hosts }}
+    http:
+      paths:
+      - path: {{ .Values.ingress.hive.path }}
+        backend:
+          serviceName: {{ .Values.ingress.hive.service }}
+          servicePort: {{ .Values.ingress.hive.port }}
+  - host: {{ .Values.ingress.master.hosts }}
+    http:
+      paths:
+      - path: {{ .Values.ingress.master.path }}
+        backend:
+          serviceName: {{ .Values.ingress.master.service }}
+          servicePort: {{ .Values.ingress.master.port }}
+  - host: {{ .Values.ingress.history.hosts }}
+    http:
+      paths:
+      - path: {{ .Values.ingress.history.path }}
+        backend:
+          serviceName: {{ .Values.ingress.history.service }}
+          servicePort: {{ .Values.ingress.history.port }}
+  - host: {{ .Values.ingress.zeppelin.hosts }}
+    http:
+      paths:
+      - path: {{ .Values.ingress.zeppelin.path }}
+        backend:
+          serviceName: {{ .Values.ingress.zeppelin.service }}
+          servicePort: {{ .Values.ingress.zeppelin.port }}
+{{- end -}}

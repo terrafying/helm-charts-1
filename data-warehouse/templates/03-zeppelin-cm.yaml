@@ -1,0 +1,15 @@
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: zeppelin-cm
+  namespace: {{ .Values.namespace }}
+  labels:
+    app: {{ .Values.zeppelin.app }}
+    component: {{ .Values.component }}
+data:
+  zeppelin-site.xml: |
+{{ .Files.Get "zeppelin-site.xml" }}
+  log4j.properties: |
+{{ .Files.Get "log4j.properties" }}
+  zeppelin-env.sh: |
+{{ .Files.Get "zeppelin-env.sh" }}  
