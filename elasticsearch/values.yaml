@@ -1,5 +1,5 @@
 namespace: elastic
-externalIPs: 172.20.237.244
+externalIPs: {}
 elastic:
   image:
     registry: docker.elastic.co/elasticsearch/elasticsearch-oss
