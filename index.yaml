@@ -1,3 +1,13 @@
 apiVersion: v1
-entries: {}
-generated: "2019-08-02T08:57:14.445531051Z"
+entries:
+  elasticsearch:
+  - apiVersion: v1
+    appVersion: "1.0"
+    created: "2019-08-02T12:14:05.418571718Z"
+    description: A Helm chart for Kubernetes
+    digest: 76025628b34be5a62b4a4d5d960a2680c8ea5cf37f52857cb5c421353aa53034
+    name: elasticsearch
+    urls:
+    - elasticsearch/elasticsearch-0.1.0.tgz
+    version: 0.1.0
+generated: "2019-08-02T12:14:05.350298182Z"
