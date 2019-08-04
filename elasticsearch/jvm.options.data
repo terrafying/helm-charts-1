@@ -6,13 +6,13 @@
     -Djna.nosys=true
     -Dlog4j.shutdownHookEnabled=false
     -Dlog4j2.disable.jmx=true
-    -XX:+AlwaysPreTouch
-    -XX:+HeapDumpOnOutOfMemoryError
-    -XX:+UseCMSInitiatingOccupancyOnly
-    -XX:-OmitStackTraceInFastThrow
-    -XX:CMSInitiatingOccupancyFraction=75
-    -XX:+UseG1GC
-    -XX:MaxGCPauseMillis=300
+    #-XX:+AlwaysPreTouch
+    #-XX:+HeapDumpOnOutOfMemoryError
+    #-XX:+UseCMSInitiatingOccupancyOnly
+    #-XX:-OmitStackTraceInFastThrow
+    #-XX:CMSInitiatingOccupancyFraction=75
+    #-XX:+UseG1GC
+    #-XX:MaxGCPauseMillis=300
     -Xms2g
     -Xmx2g
     -Xss16m
