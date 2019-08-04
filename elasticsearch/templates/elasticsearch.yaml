@@ -27,24 +27,6 @@ data:
     -Djna.nosys=true
     -Dlog4j.shutdownHookEnabled=false
     -Dlog4j2.disable.jmx=true
-    #-XX:+AlwaysPreTouch
-    #-XX:+HeapDumpOnOutOfMemoryError
-    #-XX:+PrintGCApplicationStoppedTime
-    #-XX:+PrintGCDateStamps
-    #-XX:+PrintGCDetails
-    #-XX:+PrintTenuringDistribution
-    #-XX:+UseCMSInitiatingOccupancyOnly
-    #-XX:+UseConcMarkSweepGC
-    #-XX:+UseGCLogFileRotation
-    #-XX:-OmitStackTraceInFastThrow
-    #-XX:CMSInitiatingOccupancyFraction=75
-    #-Xloggc:/usr/share/elasticsearch/logs/gc.log
-    #-XX:GCLogFileSize=64m
-    #-XX:NumberOfGCLogFiles=32
-    #-Xms{{ .Values.xms }}
-    #-Xmx{{ .Values.xmx }}
-    #-Xss{{ .Values.xss }}
-    #-server
 ---
 apiVersion: policy/v1beta1
 kind: PodDisruptionBudget
