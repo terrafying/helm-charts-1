@@ -18,15 +18,15 @@ data:
     discovery.zen.minimum_master_nodes: 1
     discovery.zen.ping.unicast.hosts:{{range $i, $e := until (int .Values.replicas)}}
     - es-{{$i}}.es-svc.${POD_NAMESPACE}.svc.cluster.local{{end}}
-  jvm.options: |
-    -Dfile.encoding=UTF-8
-    -Dio.netty.noKeySetOptimization=true
-    -Dio.netty.noUnsafe=true
-    -Dio.netty.recycler.maxCapacityPerThread=0
-    -Djava.awt.headless=true
-    -Djna.nosys=true
-    -Dlog4j.shutdownHookEnabled=false
-    -Dlog4j2.disable.jmx=true
+#  jvm.options: |
+#    -Dfile.encoding=UTF-8
+#    -Dio.netty.noKeySetOptimization=true
+#    -Dio.netty.noUnsafe=true
+#    -Dio.netty.recycler.maxCapacityPerThread=0
+#    -Djava.awt.headless=true
+#    -Djna.nosys=true
+#    -Dlog4j.shutdownHookEnabled=false
+#    -Dlog4j2.disable.jmx=true
 ---
 apiVersion: policy/v1beta1
 kind: PodDisruptionBudget
